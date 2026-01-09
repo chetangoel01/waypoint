@@ -1,14 +1,11 @@
 // Re-export types that mirror the server types
 // These will be used for type-safe API responses
 
-export type ApplicationStatus =
-  | 'saved'
-  | 'applied'
-  | 'phone_screen'
-  | 'interview'
-  | 'offer'
-  | 'rejected'
-  | 'withdrawn';
+export interface ApplicationStatusOption {
+  key: string;
+  label: string;
+  color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
+}
 
 export interface Profile {
   id: number;
@@ -96,11 +93,12 @@ export interface Application {
   role: string;
   url: string | null;
   job_description: string | null;
-  status: ApplicationStatus;
+  status: string;
   date_saved: string;
   date_applied: string | null;
   contacts: Contact[] | null;
   notes: string | null;
+  custom_statuses: ApplicationStatusOption[] | null;
   created_at: string;
   updated_at: string;
 }

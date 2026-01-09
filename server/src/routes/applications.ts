@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler, success, notFound } from '../middleware/response.js';
 import * as applicationsService from '../services/applications.js';
-import { ApplicationStatus } from '../types/index.js';
 
 const router = Router();
 
@@ -10,7 +9,7 @@ router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const filters = {
-      status: req.query.status as ApplicationStatus | undefined,
+      status: req.query.status as string | undefined,
       company: req.query.company as string | undefined,
     };
     const applications = applicationsService.getAll(filters);

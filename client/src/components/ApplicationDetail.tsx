@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApplication, useUpdateApplication, useStatusOptions } from '../hooks';
+import { useApplication, useUpdateApplication } from '../hooks';
 import { Icons } from './Icons';
 import { GenerateModal } from './GenerateModal';
 import styles from '../App.module.css';
-import type { Contact } from '../types';
-import type { StatusOption } from '../services/api';
+import type { Contact, ApplicationStatusOption } from '../types';
 
-// Fallback statuses if settings haven't loaded
-const defaultStatuses: StatusOption[] = [
+// Default statuses for new applications
+const defaultStatuses: ApplicationStatusOption[] = [
   { key: 'saved', label: 'Saved', color: 'gray' },
   { key: 'applied', label: 'Applied', color: 'blue' },
   { key: 'phone_screen', label: 'Phone Screen', color: 'blue' },
@@ -18,7 +17,9 @@ const defaultStatuses: StatusOption[] = [
   { key: 'withdrawn', label: 'Withdrawn', color: 'red' },
 ];
 
-const getStatusClass = (status: string, statuses: StatusOption[]) => {
+const colorOptions: ApplicationStatusOption['color'][] = ['gray', 'blue', 'amber', 'green', 'red'];
+
+const getStatusClass = (status: string, statuses: ApplicationStatusOption[]) => {
   const found = statuses.find(s => s.key === status);
   const color = found?.color || 'gray';
   const colorMap: Record<string, string> = {
@@ -31,9 +32,9 @@ const getStatusClass = (status: string, statuses: StatusOption[]) => {
   return colorMap[color] || styles.statusSaved;
 };
 
-const getStatusLabel = (status: string, statuses: StatusOption[]) => {
+const getStatusLabel = (status: string, statuses: ApplicationStatusOption[]) => {
   const found = statuses.find(s => s.key === status);
-  return found?.label || status.replace('_', ' ');
+  return found?.label || status.replace(/_/g, ' ');
 };
 
 const formatDate = (dateString: string | null): string | null => {
@@ -49,9 +50,9 @@ export function ApplicationDetail() {
   
   const { data: app, isLoading, error } = useApplication(applicationId);
   const updateApplication = useUpdateApplication();
-  const { data: statusOptions } = useStatusOptions();
   
-  const statuses = statusOptions || defaultStatuses;
+  // Use app's custom statuses if available, otherwise use defaults
+  const statuses = app?.custom_statuses || defaultStatuses;
 
   // Modal state
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -66,8 +67,11 @@ export function ApplicationDetail() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [newContact, setNewContact] = useState<Contact>({ name: '', role: '', email: '', linkedin: '' });
   
-  // Status dropdown
+  // Status dropdown and edit
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showStatusEditor, setShowStatusEditor] = useState(false);
+  const [editingStatuses, setEditingStatuses] = useState<ApplicationStatusOption[]>([]);
+  const [newStatus, setNewStatus] = useState({ label: '', color: 'gray' as ApplicationStatusOption['color'] });
 
   if (isLoading) {
     return (
@@ -187,6 +191,39 @@ export function ApplicationDetail() {
     updateApplication.mutate({ id: app.id, data: { contacts: updatedContacts } });
   };
 
+  // Status editing handlers
+  const handleOpenStatusEditor = () => {
+    setEditingStatuses([...statuses]);
+    setShowStatusEditor(true);
+    setShowStatusDropdown(false);
+  };
+
+  const handleSaveStatuses = () => {
+    updateApplication.mutate({ 
+      id: app.id, 
+      data: { custom_statuses: editingStatuses } 
+    });
+    setShowStatusEditor(false);
+  };
+
+  const handleAddStatus = () => {
+    if (!newStatus.label.trim()) return;
+    const key = newStatus.label.trim().toLowerCase().replace(/\s+/g, '_');
+    if (editingStatuses.some(s => s.key === key)) return;
+    setEditingStatuses([...editingStatuses, { key, label: newStatus.label.trim(), color: newStatus.color }]);
+    setNewStatus({ label: '', color: 'gray' });
+  };
+
+  const handleRemoveStatus = (key: string) => {
+    setEditingStatuses(editingStatuses.filter(s => s.key !== key));
+  };
+
+  const handleUpdateStatusOption = (key: string, field: 'label' | 'color', value: string) => {
+    setEditingStatuses(editingStatuses.map(s => 
+      s.key === key ? { ...s, [field]: value } : s
+    ));
+  };
+
   return (
     <div className={styles.mainInner}>
       <div className={styles.detailView}>
@@ -253,7 +290,7 @@ export function ApplicationDetail() {
                         borderRadius: 'var(--radius-lg)',
                         boxShadow: 'var(--shadow-lg)',
                         zIndex: 100,
-                        minWidth: 160,
+                        minWidth: 180,
                         overflow: 'hidden',
                       }}>
                         {statuses.map((s) => (
@@ -273,6 +310,24 @@ export function ApplicationDetail() {
                             {s.label}
                           </button>
                         ))}
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 'var(--space-1)' }}>
+                          <button
+                            onClick={handleOpenStatusEditor}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 'var(--space-2)',
+                              width: '100%',
+                              padding: 'var(--space-2) var(--space-3)',
+                              textAlign: 'left',
+                              fontSize: 'var(--text-sm)',
+                              color: 'var(--color-ink-muted)',
+                            }}
+                          >
+                            <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Settings /></span>
+                            Edit statuses
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -581,6 +636,145 @@ export function ApplicationDetail() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Statuses Modal */}
+      {showStatusEditor && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowStatusEditor(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'var(--color-bg)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-6)',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: 'var(--shadow-xl)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--color-ink)' }}>
+                Edit Statuses
+              </h2>
+              <button 
+                onClick={() => setShowStatusEditor(false)}
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-ink-muted)',
+                }}
+              >
+                <span style={{ transform: 'rotate(45deg)', display: 'flex', width: 20, height: 20 }}>
+                  <Icons.Plus />
+                </span>
+              </button>
+            </div>
+
+            <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+              Customize the status options for this application's pipeline
+            </p>
+
+            {/* Existing statuses */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+              {editingStatuses.map((status) => (
+                <div key={status.key} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={status.label}
+                    onChange={(e) => handleUpdateStatusOption(status.key, 'label', e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <select
+                    value={status.color}
+                    onChange={(e) => handleUpdateStatusOption(status.key, 'color', e.target.value)}
+                    style={{ width: 100 }}
+                  >
+                    {colorOptions.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => handleRemoveStatus(status.key)}
+                    style={{ color: 'var(--color-rose)', padding: 'var(--space-1)' }}
+                    title="Remove"
+                  >
+                    <span style={{ width: 16, height: 16, display: 'flex', transform: 'rotate(45deg)' }}>
+                      <Icons.Plus />
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new status */}
+            <div style={{ 
+              display: 'flex', 
+              gap: 'var(--space-2)', 
+              alignItems: 'center', 
+              paddingTop: 'var(--space-3)', 
+              borderTop: '1px solid var(--border-subtle)',
+              marginBottom: 'var(--space-4)'
+            }}>
+              <input
+                type="text"
+                placeholder="New status label"
+                value={newStatus.label}
+                onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+                style={{ flex: 1 }}
+              />
+              <select
+                value={newStatus.color}
+                onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as ApplicationStatusOption['color'] })}
+                style={{ width: 100 }}
+              >
+                {colorOptions.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <button
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={handleAddStatus}
+                disabled={!newStatus.label.trim()}
+                style={{ padding: 'var(--space-1) var(--space-3)' }}
+              >
+                Add
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <button 
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={() => setShowStatusEditor(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`${styles.button} ${styles.buttonPrimary}`}
+                onClick={handleSaveStatuses}
+              >
+                Save Statuses
+              </button>
+            </div>
           </div>
         </div>
       )}

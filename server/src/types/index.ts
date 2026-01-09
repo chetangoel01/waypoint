@@ -78,14 +78,11 @@ export interface Story {
 }
 
 // Application types
-export type ApplicationStatus =
-  | 'saved'
-  | 'applied'
-  | 'phone_screen'
-  | 'interview'
-  | 'offer'
-  | 'rejected'
-  | 'withdrawn';
+export interface ApplicationStatusOption {
+  key: string;
+  label: string;
+  color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
+}
 
 export interface Application {
   id: number;
@@ -93,11 +90,12 @@ export interface Application {
   role: string;
   url: string | null;
   job_description: string | null;
-  status: ApplicationStatus;
+  status: string;
   date_saved: string;
   date_applied: string | null;
   contacts: Contact[] | null;
   notes: string | null;
+  custom_statuses: ApplicationStatusOption[] | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,5 @@
 import db from '../db/index.js';
-import { Application, ApplicationStatus, Contact } from '../types/index.js';
+import { Application, ApplicationStatusOption, Contact } from '../types/index.js';
 import { validationError, notFound } from '../middleware/response.js';
 
 interface ApplicationRow {
@@ -8,11 +8,12 @@ interface ApplicationRow {
   role: string;
   url: string | null;
   job_description: string | null;
-  status: ApplicationStatus;
+  status: string;
   date_saved: string;
   date_applied: string | null;
   contacts: string | null;
   notes: string | null;
+  custom_statuses: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -22,10 +23,11 @@ export interface CreateApplicationData {
   role: string;
   url?: string | null;
   job_description?: string | null;
-  status?: ApplicationStatus;
+  status?: string;
   date_applied?: string | null;
   contacts?: Contact[];
   notes?: string | null;
+  custom_statuses?: ApplicationStatusOption[];
 }
 
 export interface UpdateApplicationData {
@@ -33,25 +35,23 @@ export interface UpdateApplicationData {
   role?: string;
   url?: string | null;
   job_description?: string | null;
-  status?: ApplicationStatus;
+  status?: string;
   date_applied?: string | null;
   contacts?: Contact[];
   notes?: string | null;
+  custom_statuses?: ApplicationStatusOption[];
 }
 
 export interface ApplicationFilters {
-  status?: ApplicationStatus;
+  status?: string;
   company?: string;
 }
-
-const VALID_STATUSES: ApplicationStatus[] = [
-  'saved', 'applied', 'phone_screen', 'interview', 'offer', 'rejected', 'withdrawn'
-];
 
 function parseApplication(row: ApplicationRow): Application {
   return {
     ...row,
     contacts: row.contacts ? JSON.parse(row.contacts) : null,
+    custom_statuses: row.custom_statuses ? JSON.parse(row.custom_statuses) : null,
   };
 }
 
@@ -91,13 +91,9 @@ export function create(data: CreateApplicationData): Application {
     validationError('Company and role are required');
   }
 
-  if (data.status && !VALID_STATUSES.includes(data.status)) {
-    validationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
-  }
-
   const stmt = db.prepare(`
-    INSERT INTO applications (company, role, url, job_description, status, date_applied, contacts, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO applications (company, role, url, job_description, status, date_applied, contacts, notes, custom_statuses)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -108,7 +104,8 @@ export function create(data: CreateApplicationData): Application {
     data.status || 'saved',
     data.date_applied || null,
     data.contacts ? JSON.stringify(data.contacts) : null,
-    data.notes || null
+    data.notes || null,
+    data.custom_statuses ? JSON.stringify(data.custom_statuses) : null
   );
 
   return getById(result.lastInsertRowid as number)!;
@@ -119,10 +116,6 @@ export function update(id: number, data: UpdateApplicationData): Application {
   const existing = getById(id);
   if (!existing) {
     notFound('Application');
-  }
-
-  if (data.status && !VALID_STATUSES.includes(data.status)) {
-    validationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
   }
 
   const fields: string[] = [];
@@ -160,6 +153,10 @@ export function update(id: number, data: UpdateApplicationData): Application {
     fields.push('notes = ?');
     values.push(data.notes);
   }
+  if (data.custom_statuses !== undefined) {
+    fields.push('custom_statuses = ?');
+    values.push(data.custom_statuses ? JSON.stringify(data.custom_statuses) : null);
+  }
 
   if (fields.length > 0) {
     const sql = `UPDATE applications SET ${fields.join(', ')} WHERE id = ?`;
@@ -181,11 +178,7 @@ export function remove(id: number): boolean {
 }
 
 // Update status only
-export function updateStatus(id: number, status: ApplicationStatus): Application {
-  if (!VALID_STATUSES.includes(status)) {
-    validationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
-  }
-
+export function updateStatus(id: number, status: string): Application {
   const existing = getById(id);
   if (!existing) {
     notFound('Application');
