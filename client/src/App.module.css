@@ -349,7 +349,7 @@
 /* Empty state */
 .emptyState {
   text-align: center;
-  padding: var(--space-16) var(--space-8);
+  padding: var(--space-10) var(--space-8);
   color: var(--color-ink-muted);
 }
 

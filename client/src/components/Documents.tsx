@@ -80,7 +80,7 @@ export function Documents() {
           <p className={styles.emptyStateText}>
             When you generate cover letters or custom responses from an application, they'll appear here.
           </p>
-          <p className={styles.formHint} style={{ marginTop: 'var(--space-4)' }}>
+          <p className={styles.emptyStateText} style={{ marginTop: 'var(--space-3)', opacity: 0.7 }}>
             Tip: Go to an application and click "Generate Cover Letter" or "Generate Response to Question"
           </p>
         </div>
