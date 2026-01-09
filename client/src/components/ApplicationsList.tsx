@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApplications, useCreateApplication } from '../hooks';
+import { useApplications, useCreateApplication, useDeleteApplication } from '../hooks';
 import { Icons } from './Icons';
 import styles from '../App.module.css';
 import type { ApplicationStatus } from '../types';
@@ -28,9 +28,21 @@ export function ApplicationsList() {
   const navigate = useNavigate();
   const { data: applications, isLoading, error } = useApplications();
   const createApplication = useCreateApplication();
+  const deleteApplication = useDeleteApplication();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newApp, setNewApp] = useState({ company: '', role: '', url: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; company: string } | null>(null);
+
+  const handleDeleteApplication = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await deleteApplication.mutateAsync(deleteConfirm.id);
+      setDeleteConfirm(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
 
   if (isLoading) {
     return (
@@ -148,6 +160,22 @@ export function ApplicationsList() {
                     </span>
                   </div>
                 </div>
+                <div className={styles.applicationActions} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className={styles.applicationActionBtn}
+                    onClick={() => navigate(`/applications/${app.id}`)}
+                    title="Edit"
+                  >
+                    <span className={styles.navIcon}><Icons.Edit /></span>
+                  </button>
+                  <button
+                    className={`${styles.applicationActionBtn} ${styles.applicationActionBtnDanger}`}
+                    onClick={() => setDeleteConfirm({ id: app.id, company: app.company })}
+                    title="Delete"
+                  >
+                    <span className={styles.navIcon}><Icons.Trash /></span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -171,6 +199,57 @@ export function ApplicationsList() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setDeleteConfirm(null)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'var(--color-bg)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-6)',
+              width: '100%',
+              maxWidth: '400px',
+              boxShadow: 'var(--shadow-xl)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-ink)', marginBottom: 'var(--space-3)' }}>
+              Delete Application?
+            </h2>
+            <p style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-5)' }}>
+              Are you sure you want to delete the application for <strong>{deleteConfirm.company}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <button 
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`${styles.button}`}
+                style={{ backgroundColor: 'var(--color-rose)', color: 'white' }}
+                onClick={handleDeleteApplication}
+                disabled={deleteApplication.isPending}
+              >
+                {deleteApplication.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Application Modal */}
       {isCreateModalOpen && (

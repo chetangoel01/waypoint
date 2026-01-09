@@ -495,6 +495,38 @@
   margin-top: var(--space-3);
 }
 
+.applicationActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.applicationActionBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  transition: 
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.applicationActionBtn:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-ink);
+}
+
+
+.applicationActionBtnDanger:hover {
+  background-color: var(--color-rose-light);
+  color: var(--color-rose);
+}
+
 .statusBadge {
   display: inline-flex;
   align-items: center;
