@@ -19,7 +19,10 @@
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 /* Subtle left-edge accent */

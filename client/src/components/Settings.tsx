@@ -154,7 +154,7 @@ export function Settings() {
           {/* Status indicator - using existing badge styles */}
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Status</label>
-            <div style={{ marginTop: 'var(--space-2)' }}>
+            <div>
               {isLoading ? (
                 <span className={styles.statusBadge} style={{ 
                   backgroundColor: 'var(--color-bg-subtle)', 
