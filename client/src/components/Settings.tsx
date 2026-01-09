@@ -108,6 +108,7 @@ export function Settings() {
               ) : aiStatus?.configured ? (
                 <span className={`${styles.statusBadge} ${styles.statusOffer}`}>
                   Connected {aiStatus.keyPreview && `(${aiStatus.keyPreview})`}
+                  {aiStatus.source === 'env' && ' • from .env'}
                 </span>
               ) : (
                 <span className={`${styles.statusBadge} ${styles.statusInterview}`}>
@@ -117,55 +118,78 @@ export function Settings() {
             </div>
           </div>
 
-          {/* API Key input */}
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>OpenAI API Key</label>
-            <p className={styles.formHint}>
-              Required for AI-powered content generation.{' '}
-              <a 
-                href="https://platform.openai.com/api-keys" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className={styles.sectionLink}
-              >
-                Get your API key <Icons.ExternalLink />
-              </a>
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', maxWidth: '500px', marginTop: 'var(--space-3)' }}>
-              <input 
-                type="password" 
-                placeholder={aiStatus?.configured ? "Enter new key to replace" : "Paste your API key"}
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
-                style={{ flex: 1 }}
-              />
-              <button 
-                className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={handleSaveApiKey}
-                disabled={!apiKeyInput.trim() || saveApiKey.isPending}
-              >
-                {saveApiKey.isPending ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </div>
-
-          {/* Clear API Key */}
-          {aiStatus?.configured && (
+          {/* Show different UI based on whether key is from env */}
+          {aiStatus?.source === 'env' ? (
             <div className={styles.formGroup}>
-              <button 
-                onClick={handleClearApiKey}
-                disabled={clearApiKey.isPending}
-                style={{ 
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--color-rose)',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '2px',
-                }}
-              >
-                {clearApiKey.isPending ? 'Removing...' : 'Remove API key'}
-              </button>
+              <p className={styles.formHint}>
+                API key loaded from <code style={{ 
+                  backgroundColor: 'var(--color-bg-subtle)', 
+                  padding: '2px 6px', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--text-xs)'
+                }}>OPENAI_API_KEY</code> environment variable.
+                <br />
+                To change it, update your <code style={{ 
+                  backgroundColor: 'var(--color-bg-subtle)', 
+                  padding: '2px 6px', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--text-xs)'
+                }}>.env</code> file and restart the server.
+              </p>
             </div>
+          ) : (
+            <>
+              {/* API Key input */}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>OpenAI API Key</label>
+                <p className={styles.formHint}>
+                  Required for AI-powered content generation.{' '}
+                  <a 
+                    href="https://platform.openai.com/api-keys" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.sectionLink}
+                  >
+                    Get your API key <Icons.ExternalLink />
+                  </a>
+                </p>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', maxWidth: '500px', marginTop: 'var(--space-3)' }}>
+                  <input 
+                    type="password" 
+                    placeholder={aiStatus?.configured ? "Enter new key to replace" : "Paste your API key"}
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
+                    style={{ flex: 1 }}
+                  />
+                  <button 
+                    className={`${styles.button} ${styles.buttonPrimary}`}
+                    onClick={handleSaveApiKey}
+                    disabled={!apiKeyInput.trim() || saveApiKey.isPending}
+                  >
+                    {saveApiKey.isPending ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Clear API Key */}
+              {aiStatus?.configured && (
+                <div className={styles.formGroup}>
+                  <button 
+                    onClick={handleClearApiKey}
+                    disabled={clearApiKey.isPending}
+                    style={{ 
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-rose)',
+                      textDecoration: 'underline',
+                      textUnderlineOffset: '2px',
+                    }}
+                  >
+                    {clearApiKey.isPending ? 'Removing...' : 'Remove API key'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 

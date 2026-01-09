@@ -60,8 +60,20 @@ export function getAllSettings(): Record<string, string> {
 export const Settings = {
   OPENAI_API_KEY: 'openai_api_key',
   
+  // Returns API key from env var first, then falls back to database
   getApiKey(): string | null {
+    // Check environment variable first
+    const envKey = process.env.OPENAI_API_KEY;
+    if (envKey) {
+      return envKey;
+    }
+    // Fall back to database setting
     return getSetting(Settings.OPENAI_API_KEY);
+  },
+  
+  // Check if key is from environment (read-only) vs database
+  isKeyFromEnv(): boolean {
+    return !!process.env.OPENAI_API_KEY;
   },
   
   setApiKey(apiKey: string): void {

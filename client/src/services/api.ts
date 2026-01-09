@@ -253,6 +253,7 @@ export const generateApi = {
 export interface AiStatus {
   configured: boolean;
   keyPreview: string | null;
+  source: 'env' | 'database';
 }
 
 // Settings endpoints

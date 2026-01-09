@@ -26,9 +26,11 @@ router.get('/', (_req: Request, res: Response) => {
 // GET /api/settings/ai-status - check if AI is configured
 router.get('/ai-status', (_req: Request, res: Response) => {
   const apiKey = Settings.getApiKey();
+  const isFromEnv = Settings.isKeyFromEnv();
   res.json(success({
     configured: !!apiKey,
     keyPreview: apiKey ? '••••' + apiKey.slice(-4) : null,
+    source: isFromEnv ? 'env' : 'database',
   }));
 });
 
