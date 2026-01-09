@@ -207,13 +207,6 @@ export function GenerateModal({
               </>
             )}
 
-            <div className={styles.info}>
-              <Icons.Lightbulb />
-              <span>
-                The AI will use your profile, experience, and skills to personalize the content.
-              </span>
-            </div>
-
             {error && (
               <div className={styles.error}>
                 <Icons.AlertCircle />
