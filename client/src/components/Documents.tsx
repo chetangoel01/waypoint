@@ -20,19 +20,17 @@ export function Documents() {
     <div className={styles.mainInner}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div>
-              <h1 className={styles.pageTitle}>Documents</h1>
-              <p className={styles.pageSubtitle}>Cover letters and responses you've generated</p>
-            </div>
-            <button 
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={handleGenerate}
-            >
-              <span className={styles.navIcon}><Icons.Lightbulb /></span>
-              Generate New
-            </button>
+          <div>
+            <h1 className={styles.pageTitle}>Documents</h1>
+            <p className={styles.pageSubtitle}>Cover letters and responses you've generated</p>
           </div>
+          <button 
+            className={`${styles.button} ${styles.buttonPrimary}`}
+            onClick={handleGenerate}
+          >
+            <span className={styles.navIcon}><Icons.Lightbulb /></span>
+            Generate New
+          </button>
         </header>
 
         {showComingSoon && (
