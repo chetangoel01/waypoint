@@ -243,6 +243,7 @@ export function ApplicationDetail() {
                   onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
                   placeholder="Company name"
                   autoFocus
+                  size={Math.max(editForm.company.length, 12)}
                   style={{
                     font: 'inherit',
                     fontSize: 'var(--text-2xl)',
@@ -252,9 +253,10 @@ export function ApplicationDetail() {
                     border: 'none',
                     borderBottom: '2px solid var(--color-terracotta)',
                     borderRadius: 0,
-                    padding: '0 0 2px 0',
+                    padding: '0 4px 2px 0',
                     margin: 0,
-                    width: '100%',
+                    width: 'auto',
+                    maxWidth: '100%',
                     outline: 'none',
                   }}
                 />
@@ -263,6 +265,7 @@ export function ApplicationDetail() {
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                   placeholder="Role"
+                  size={Math.max(editForm.role.length, 8)}
                   style={{
                     font: 'inherit',
                     fontSize: 'var(--text-lg)',
@@ -271,9 +274,10 @@ export function ApplicationDetail() {
                     border: 'none',
                     borderBottom: '1px solid var(--border-subtle)',
                     borderRadius: 0,
-                    padding: '0 0 2px 0',
+                    padding: '0 4px 2px 0',
                     margin: 0,
-                    width: '100%',
+                    width: 'auto',
+                    maxWidth: '100%',
                     outline: 'none',
                   }}
                 />
@@ -281,7 +285,8 @@ export function ApplicationDetail() {
                   type="url"
                   value={editForm.url}
                   onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                  placeholder="Add job posting URL..."
+                  placeholder="Add job URL..."
+                  size={Math.max(editForm.url.length, 14)}
                   style={{
                     font: 'inherit',
                     fontSize: 'var(--text-sm)',
@@ -290,9 +295,10 @@ export function ApplicationDetail() {
                     border: 'none',
                     borderBottom: '1px dashed var(--border-subtle)',
                     borderRadius: 0,
-                    padding: '2px 0',
+                    padding: '2px 4px 2px 0',
                     margin: 0,
-                    width: '100%',
+                    width: 'auto',
+                    maxWidth: '100%',
                     outline: 'none',
                   }}
                 />
