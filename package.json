@@ -1,0 +1,31 @@
+{
+  "name": "application-helper",
+  "version": "1.0.0",
+  "description": "Job Application Tracker + AI Assistant",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "electron"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:electron": "npm run dev --workspace=electron",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build:electron": "npm run build --workspace=electron",
+    "package": "npm run package --workspace=electron",
+    "db:init": "npm run db:init --workspace=server",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "rm -rf node_modules client/node_modules server/node_modules electron/node_modules client/dist server/dist electron/dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

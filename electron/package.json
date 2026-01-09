@@ -1,0 +1,54 @@
+{
+  "name": "electron-shell",
+  "version": "1.0.0",
+  "description": "Electron shell for Job Application Tracker",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsc && concurrently \"tsc -w\" \"electron .\"",
+    "build": "tsc",
+    "start": "electron .",
+    "package": "electron-builder --mac",
+    "package:win": "electron-builder --win",
+    "package:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "electron-is-dev": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "concurrently": "^8.2.2",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "com.jobtracker.app",
+    "productName": "Job Application Tracker",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../server/dist",
+        "to": "server"
+      },
+      {
+        "from": "../client/dist",
+        "to": "client"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"]
+    }
+  }
+}
