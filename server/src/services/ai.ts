@@ -154,7 +154,7 @@ function buildJobContext(applicationId: number): string {
 // Generate a cover letter
 export async function generateCoverLetter(input: GenerateCoverLetterInput): Promise<GenerationResult> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const applicantContext = await buildApplicantContext();
   const jobContext = buildJobContext(input.applicationId);
@@ -210,7 +210,7 @@ Write the cover letter now. Do not include any explanations or meta-commentary, 
 // Generate a response to a custom question
 export async function generateCustomResponse(input: GenerateCustomResponseInput): Promise<GenerationResult> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const applicantContext = await buildApplicantContext();
   const jobContext = buildJobContext(input.applicationId);
@@ -258,7 +258,7 @@ Write the response now. Do not include any explanations or meta-commentary, just
 // Refine existing content based on instructions
 export async function refineContent(input: RefineContentInput): Promise<GenerationResult> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const systemPrompt = `You are an expert editor helping refine job application content.
 
