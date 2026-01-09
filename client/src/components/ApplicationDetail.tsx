@@ -50,6 +50,7 @@ export function ApplicationDetail() {
   // Modal state
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateMode, setGenerateMode] = useState<'cover-letter' | 'custom-response'>('cover-letter');
+  const [initialQuestion, setInitialQuestion] = useState('');
 
   if (isLoading) {
     return (
@@ -101,14 +102,27 @@ export function ApplicationDetail() {
 
   const handleOpenCoverLetter = () => {
     setGenerateMode('cover-letter');
+    setInitialQuestion('');
+    setShowGenerateModal(true);
+  };
+
+  const handleOpenCustomResponse = (question?: string) => {
+    setGenerateMode('custom-response');
+    setInitialQuestion(question || '');
     setShowGenerateModal(true);
   };
 
   const handleSaveGenerated = (content: string) => {
-    // For now, save to notes. Later this could create a document.
-    const updatedNotes = app.notes 
-      ? `${app.notes}\n\n--- Generated ${generateMode === 'cover-letter' ? 'Cover Letter' : 'Response'} ---\n${content}`
-      : `--- Generated ${generateMode === 'cover-letter' ? 'Cover Letter' : 'Response'} ---\n${content}`;
+    // Save to notes with clear formatting
+    const label = generateMode === 'cover-letter' ? 'Cover Letter' : 'Response';
+    const timestamp = new Date().toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: 'numeric', 
+      minute: '2-digit' 
+    });
+    const newContent = `\n\n--- Generated ${label} (${timestamp}) ---\n${content}`;
+    const updatedNotes = (app.notes || '') + newContent;
     updateApplication.mutate({ id: app.id, data: { notes: updatedNotes } });
   };
 
@@ -131,7 +145,7 @@ export function ApplicationDetail() {
               </span>
               {app.url && (
                 <a href={app.url} target="_blank" rel="noopener noreferrer" className={styles.sectionLink}>
-                  View posting <Icons.ExternalLink />
+                  View posting <span className={styles.navIcon}><Icons.ExternalLink /></span>
                 </a>
               )}
             </div>
@@ -141,7 +155,7 @@ export function ApplicationDetail() {
               className={`${styles.button} ${styles.buttonPrimary}`}
               onClick={handleOpenCoverLetter}
             >
-              <Icons.Lightbulb />
+              <span className={styles.navIcon}><Icons.Lightbulb /></span>
               Generate Cover Letter
             </button>
           </div>
@@ -157,6 +171,21 @@ export function ApplicationDetail() {
                 <p className={styles.jobDescription}>{app.job_description}</p>
               </section>
             )}
+
+            {/* Custom Questions Section */}
+            <section className={styles.detailSection}>
+              <h2 className={styles.detailSectionTitle}>Application Questions</h2>
+              <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+                Generate AI-powered responses to application questions
+              </p>
+              <button 
+                className={styles.addQuestionButton}
+                onClick={() => handleOpenCustomResponse()}
+              >
+                <span className={styles.navIcon}><Icons.Lightbulb /></span>
+                Generate Response to Question
+              </button>
+            </section>
 
             {/* Notes */}
             <section className={styles.detailSection}>
@@ -235,8 +264,9 @@ export function ApplicationDetail() {
               ) : (
                 <p className={styles.insightEmpty}>No contacts added yet</p>
               )}
-              <button className={styles.addQuestionButton} style={{ marginTop: '0.75rem' }}>
-                <Icons.Plus /> Add contact
+              <button className={styles.addQuestionButton} style={{ marginTop: 'var(--space-3)' }}>
+                <span className={styles.navIcon}><Icons.Plus /></span>
+                Add contact
               </button>
             </section>
           </div>
@@ -251,6 +281,7 @@ export function ApplicationDetail() {
         companyName={app.company}
         roleName={app.role}
         mode={generateMode}
+        initialQuestion={initialQuestion}
         onSave={handleSaveGenerated}
       />
     </div>
