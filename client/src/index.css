@@ -22,6 +22,10 @@
   --color-amber-light: #FFFBEB;
   --color-rose: #DC2626;
   --color-rose-light: #FEF2F2;
+  --color-sky: #0284C7;
+  --color-sky-light: #F0F9FF;
+  --color-honey: #D97706;
+  --color-honey-light: #FFFBEB;
 
   /* Surfaces */
   --surface-page: var(--color-bg);
