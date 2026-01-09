@@ -199,29 +199,35 @@ export function ApplicationDetail() {
           <div className={styles.detailLogo}>{(isEditing ? editForm.company : app.company).charAt(0)}</div>
           <div className={styles.detailInfo}>
             {isEditing ? (
-              <>
-                <input
-                  type="text"
-                  value={editForm.company}
-                  onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
-                  placeholder="Company name"
-                  style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, marginBottom: 'var(--space-2)' }}
-                />
-                <input
-                  type="text"
-                  value={editForm.role}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  placeholder="Role"
-                  style={{ fontSize: 'var(--text-lg)', color: 'var(--color-ink-muted)', marginBottom: 'var(--space-2)' }}
-                />
-                <input
-                  type="url"
-                  value={editForm.url}
-                  onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                  placeholder="Job posting URL (optional)"
-                  style={{ fontSize: 'var(--text-sm)' }}
-                />
-              </>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', flex: 1 }}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.formLabel}>Company</label>
+                  <input
+                    type="text"
+                    value={editForm.company}
+                    onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                    placeholder="Company name"
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.formLabel}>Role</label>
+                  <input
+                    type="text"
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                    placeholder="Role"
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.formLabel}>Job URL</label>
+                  <input
+                    type="url"
+                    value={editForm.url}
+                    onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
             ) : (
               <>
                 <h1 className={styles.detailCompany}>{app.company}</h1>
