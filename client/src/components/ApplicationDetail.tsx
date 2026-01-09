@@ -236,7 +236,7 @@ export function ApplicationDetail() {
           <div className={styles.detailLogo}>{(isEditing ? editForm.company : app.company).charAt(0)}</div>
           <div className={styles.detailInfo}>
             {isEditing ? (
-              <div className={styles.detailInfo}>
+              <div className={styles.detailInfo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <input
                   type="text"
                   value={editForm.company}
