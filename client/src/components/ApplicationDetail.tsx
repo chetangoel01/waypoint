@@ -1,46 +1,39 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApplication, useUpdateApplication } from '../hooks';
+import { useApplication, useUpdateApplication, useStatusOptions } from '../hooks';
 import { Icons } from './Icons';
 import { GenerateModal } from './GenerateModal';
 import styles from '../App.module.css';
-import type { ApplicationStatus, Contact } from '../types';
+import type { Contact } from '../types';
+import type { StatusOption } from '../services/api';
 
-const allStatuses: { key: ApplicationStatus; label: string }[] = [
-  { key: 'saved', label: 'Saved' },
-  { key: 'applied', label: 'Applied' },
-  { key: 'phone_screen', label: 'Phone Screen' },
-  { key: 'interview', label: 'Interview' },
-  { key: 'offer', label: 'Offer' },
-  { key: 'rejected', label: 'Rejected' },
-  { key: 'withdrawn', label: 'Withdrawn' },
+// Fallback statuses if settings haven't loaded
+const defaultStatuses: StatusOption[] = [
+  { key: 'saved', label: 'Saved', color: 'gray' },
+  { key: 'applied', label: 'Applied', color: 'blue' },
+  { key: 'phone_screen', label: 'Phone Screen', color: 'blue' },
+  { key: 'interview', label: 'Interview', color: 'amber' },
+  { key: 'offer', label: 'Offer', color: 'green' },
+  { key: 'rejected', label: 'Rejected', color: 'red' },
+  { key: 'withdrawn', label: 'Withdrawn', color: 'red' },
 ];
 
-const statusSteps: { key: ApplicationStatus; label: string }[] = [
-  { key: 'saved', label: 'Saved' },
-  { key: 'applied', label: 'Applied' },
-  { key: 'phone_screen', label: 'Phone Screen' },
-  { key: 'interview', label: 'Interview' },
-  { key: 'offer', label: 'Offer' },
-];
-
-const getStatusIndex = (status: ApplicationStatus) => {
-  if (status === 'rejected' || status === 'withdrawn') return -1;
-  const idx = statusSteps.findIndex(s => s.key === status);
-  return idx >= 0 ? idx : 0;
+const getStatusClass = (status: string, statuses: StatusOption[]) => {
+  const found = statuses.find(s => s.key === status);
+  const color = found?.color || 'gray';
+  const colorMap: Record<string, string> = {
+    gray: styles.statusSaved,
+    blue: styles.statusApplied,
+    amber: styles.statusInterview,
+    green: styles.statusOffer,
+    red: styles.statusRejected,
+  };
+  return colorMap[color] || styles.statusSaved;
 };
 
-const getStatusClass = (status: ApplicationStatus) => {
-  const map: Record<ApplicationStatus, string> = {
-    saved: styles.statusSaved,
-    applied: styles.statusApplied,
-    phone_screen: styles.statusApplied,
-    interview: styles.statusInterview,
-    offer: styles.statusOffer,
-    rejected: styles.statusRejected,
-    withdrawn: styles.statusRejected,
-  };
-  return map[status] || styles.statusSaved;
+const getStatusLabel = (status: string, statuses: StatusOption[]) => {
+  const found = statuses.find(s => s.key === status);
+  return found?.label || status.replace('_', ' ');
 };
 
 const formatDate = (dateString: string | null): string | null => {
@@ -56,6 +49,9 @@ export function ApplicationDetail() {
   
   const { data: app, isLoading, error } = useApplication(applicationId);
   const updateApplication = useUpdateApplication();
+  const { data: statusOptions } = useStatusOptions();
+  
+  const statuses = statusOptions || defaultStatuses;
 
   // Modal state
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -111,7 +107,6 @@ export function ApplicationDetail() {
     );
   }
 
-  const currentStatusIndex = getStatusIndex(app.status);
   const contacts = app.contacts ?? [];
 
   const handleNotesChange = (e: React.FocusEvent<HTMLTextAreaElement>) => {
@@ -170,8 +165,8 @@ export function ApplicationDetail() {
     setIsEditing(false);
   };
 
-  const handleStatusChange = (newStatus: ApplicationStatus) => {
-    const updates: { status: ApplicationStatus; date_applied?: string } = { status: newStatus };
+  const handleStatusChange = (newStatus: string) => {
+    const updates: { status: string; date_applied?: string } = { status: newStatus };
     if (newStatus === 'applied' && !app.date_applied) {
       updates.date_applied = new Date().toISOString().split('T')[0];
     }
@@ -234,11 +229,11 @@ export function ApplicationDetail() {
                 <div className={styles.detailMeta}>
                   <div style={{ position: 'relative' }}>
                     <button
-                      className={`${styles.statusBadge} ${getStatusClass(app.status)}`}
+                      className={`${styles.statusBadge} ${getStatusClass(app.status, statuses)}`}
                       onClick={() => setShowStatusDropdown(!showStatusDropdown)}
                       style={{ cursor: 'pointer' }}
                     >
-                      {app.status.replace('_', ' ')}
+                      {getStatusLabel(app.status, statuses)}
                       <span style={{ marginLeft: 4, opacity: 0.7 }}>▾</span>
                     </button>
                     {showStatusDropdown && (
@@ -255,7 +250,7 @@ export function ApplicationDetail() {
                         minWidth: 160,
                         overflow: 'hidden',
                       }}>
-                        {allStatuses.map((s) => (
+                        {statuses.map((s) => (
                           <button
                             key={s.key}
                             onClick={() => handleStatusChange(s.key)}
@@ -376,30 +371,36 @@ export function ApplicationDetail() {
             <section className={styles.detailSection}>
               <h2 className={styles.detailSectionTitle}>Status</h2>
               <div className={styles.statusTimeline}>
-                {statusSteps.map((step, idx) => {
-                  const isCompleted = idx < currentStatusIndex;
-                  const isActive = idx === currentStatusIndex;
+                {(() => {
+                  // Filter to "positive" statuses for timeline (exclude rejected/withdrawn type statuses)
+                  const timelineStatuses = statuses.filter(s => s.color !== 'red');
+                  const currentIndex = timelineStatuses.findIndex(s => s.key === app.status);
+                  
+                  return timelineStatuses.map((step, idx) => {
+                    const isCompleted = currentIndex >= 0 && idx < currentIndex;
+                    const isActive = idx === currentIndex;
 
-                  return (
-                    <div key={step.key} className={styles.timelineItem}>
-                      <div className={`${styles.timelineDot} ${isCompleted ? styles.completed : ''} ${isActive ? styles.active : ''}`}>
-                        {isCompleted && <span className={styles.timelineCheck}><Icons.Check /></span>}
+                    return (
+                      <div key={step.key} className={styles.timelineItem}>
+                        <div className={`${styles.timelineDot} ${isCompleted ? styles.completed : ''} ${isActive ? styles.active : ''}`}>
+                          {isCompleted && <span className={styles.timelineCheck}><Icons.Check /></span>}
+                        </div>
+                        <div className={styles.timelineContent}>
+                          <p className={styles.timelineLabel}>{step.label}</p>
+                          {step.key === 'saved' && app.date_saved && (
+                            <p className={styles.timelineDate}>{formatDate(app.date_saved)}</p>
+                          )}
+                          {step.key === 'applied' && app.date_applied && (
+                            <p className={styles.timelineDate}>{formatDate(app.date_applied)}</p>
+                          )}
+                          {isActive && step.key !== 'saved' && step.key !== 'applied' && (
+                            <p className={styles.timelineDate}>Current</p>
+                          )}
+                        </div>
                       </div>
-                      <div className={styles.timelineContent}>
-                        <p className={styles.timelineLabel}>{step.label}</p>
-                        {step.key === 'saved' && app.date_saved && (
-                          <p className={styles.timelineDate}>{formatDate(app.date_saved)}</p>
-                        )}
-                        {step.key === 'applied' && app.date_applied && (
-                          <p className={styles.timelineDate}>{formatDate(app.date_applied)}</p>
-                        )}
-                        {isActive && step.key !== 'saved' && step.key !== 'applied' && (
-                          <p className={styles.timelineDate}>Current</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </section>
 

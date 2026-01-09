@@ -56,9 +56,27 @@ export function getAllSettings(): Record<string, string> {
   }, {} as Record<string, string>);
 }
 
+export interface StatusOption {
+  key: string;
+  label: string;
+  color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
+}
+
+// Default status options
+const DEFAULT_STATUSES: StatusOption[] = [
+  { key: 'saved', label: 'Saved', color: 'gray' },
+  { key: 'applied', label: 'Applied', color: 'blue' },
+  { key: 'phone_screen', label: 'Phone Screen', color: 'blue' },
+  { key: 'interview', label: 'Interview', color: 'amber' },
+  { key: 'offer', label: 'Offer', color: 'green' },
+  { key: 'rejected', label: 'Rejected', color: 'red' },
+  { key: 'withdrawn', label: 'Withdrawn', color: 'red' },
+];
+
 // Specific settings helpers
 export const Settings = {
   OPENAI_API_KEY: 'openai_api_key',
+  STATUS_OPTIONS: 'status_options',
   
   // Returns API key from env var first, then falls back to database
   getApiKey(): string | null {
@@ -82,5 +100,26 @@ export const Settings = {
   
   clearApiKey(): void {
     deleteSetting(Settings.OPENAI_API_KEY);
+  },
+
+  // Status options
+  getStatusOptions(): StatusOption[] {
+    const saved = getSetting(Settings.STATUS_OPTIONS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_STATUSES;
+      }
+    }
+    return DEFAULT_STATUSES;
+  },
+
+  setStatusOptions(options: StatusOption[]): void {
+    setSetting(Settings.STATUS_OPTIONS, JSON.stringify(options));
+  },
+
+  resetStatusOptions(): void {
+    deleteSetting(Settings.STATUS_OPTIONS);
   },
 };

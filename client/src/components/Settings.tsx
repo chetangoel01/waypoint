@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useAiStatus, useSaveApiKey, useClearApiKey } from '../hooks';
+import { useAiStatus, useSaveApiKey, useClearApiKey, useStatusOptions, useUpdateStatuses, useResetStatuses } from '../hooks';
 import { Icons } from './Icons';
 import styles from '../App.module.css';
+import type { StatusOption } from '../services/api';
+
+const colorOptions: StatusOption['color'][] = ['gray', 'blue', 'amber', 'green', 'red'];
 
 export function Settings() {
   const { data: aiStatus, isLoading, refetch } = useAiStatus();
   const saveApiKey = useSaveApiKey();
   const clearApiKey = useClearApiKey();
+  
+  const { data: statusOptions } = useStatusOptions();
+  const updateStatuses = useUpdateStatuses();
+  const resetStatuses = useResetStatuses();
 
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [editingStatuses, setEditingStatuses] = useState<StatusOption[] | null>(null);
+  const [newStatus, setNewStatus] = useState({ key: '', label: '', color: 'gray' as StatusOption['color'] });
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -46,6 +55,54 @@ export function Settings() {
         message: err instanceof Error ? err.message : 'Failed to remove API key' 
       });
     }
+  };
+
+  const handleStartEditStatuses = () => {
+    setEditingStatuses(statusOptions ? [...statusOptions] : []);
+  };
+
+  const handleSaveStatuses = async () => {
+    if (!editingStatuses) return;
+    try {
+      await updateStatuses.mutateAsync(editingStatuses);
+      setEditingStatuses(null);
+      setToast({ type: 'success', message: 'Status options saved!' });
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to save' });
+    }
+  };
+
+  const handleResetStatuses = async () => {
+    try {
+      await resetStatuses.mutateAsync();
+      setEditingStatuses(null);
+      setToast({ type: 'success', message: 'Status options reset to defaults.' });
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to reset' });
+    }
+  };
+
+  const handleAddStatus = () => {
+    if (!editingStatuses || !newStatus.key.trim() || !newStatus.label.trim()) return;
+    const key = newStatus.key.trim().toLowerCase().replace(/\s+/g, '_');
+    if (editingStatuses.some(s => s.key === key)) {
+      setToast({ type: 'error', message: 'A status with this key already exists' });
+      return;
+    }
+    setEditingStatuses([...editingStatuses, { key, label: newStatus.label.trim(), color: newStatus.color }]);
+    setNewStatus({ key: '', label: '', color: 'gray' });
+  };
+
+  const handleRemoveStatus = (key: string) => {
+    if (!editingStatuses) return;
+    setEditingStatuses(editingStatuses.filter(s => s.key !== key));
+  };
+
+  const handleUpdateStatus = (key: string, field: 'label' | 'color', value: string) => {
+    if (!editingStatuses) return;
+    setEditingStatuses(editingStatuses.map(s => 
+      s.key === key ? { ...s, [field]: value } : s
+    ));
   };
 
   return (
@@ -189,6 +246,137 @@ export function Settings() {
                   </button>
                 </div>
               )}
+            </>
+          )}
+        </section>
+
+        <section className={styles.profileSection}>
+          <h2 className={styles.profileSectionTitle}>Application Statuses</h2>
+          <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+            Customize the status options for tracking applications
+          </p>
+          
+          {editingStatuses ? (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                {editingStatuses.map((status) => (
+                  <div key={status.key} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={status.label}
+                      onChange={(e) => handleUpdateStatus(status.key, 'label', e.target.value)}
+                      style={{ flex: 1, maxWidth: 200 }}
+                    />
+                    <select
+                      value={status.color}
+                      onChange={(e) => handleUpdateStatus(status.key, 'color', e.target.value)}
+                      style={{ width: 100 }}
+                    >
+                      {colorOptions.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', width: 100 }}>
+                      {status.key}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveStatus(status.key)}
+                      style={{ color: 'var(--color-rose)', padding: 'var(--space-1)' }}
+                      title="Remove"
+                    >
+                      <span style={{ width: 16, height: 16, display: 'flex', transform: 'rotate(45deg)' }}>
+                        <Icons.Plus />
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Add new status */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)' }}>
+                <input
+                  type="text"
+                  placeholder="Label"
+                  value={newStatus.label}
+                  onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value, key: e.target.value })}
+                  style={{ flex: 1, maxWidth: 200 }}
+                />
+                <select
+                  value={newStatus.color}
+                  onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as StatusOption['color'] })}
+                  style={{ width: 100 }}
+                >
+                  {colorOptions.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <button
+                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  onClick={handleAddStatus}
+                  disabled={!newStatus.label.trim()}
+                  style={{ padding: 'var(--space-1) var(--space-3)' }}
+                >
+                  Add
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={handleSaveStatuses}
+                  disabled={updateStatuses.isPending}
+                >
+                  {updateStatuses.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  onClick={() => setEditingStatuses(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetStatuses}
+                  disabled={resetStatuses.isPending}
+                  style={{ 
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-ink-muted)',
+                    marginLeft: 'auto',
+                  }}
+                >
+                  Reset to defaults
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                {statusOptions?.map((status) => (
+                  <span
+                    key={status.key}
+                    className={styles.statusBadge}
+                    style={{
+                      backgroundColor: status.color === 'gray' ? 'var(--color-bg-subtle)' :
+                                       status.color === 'blue' ? 'var(--color-sky-light)' :
+                                       status.color === 'amber' ? 'var(--color-honey-light)' :
+                                       status.color === 'green' ? 'var(--color-sage-light)' :
+                                       'var(--color-rose-light)',
+                      color: status.color === 'gray' ? 'var(--color-ink-muted)' :
+                             status.color === 'blue' ? 'var(--color-sky)' :
+                             status.color === 'amber' ? 'var(--color-honey)' :
+                             status.color === 'green' ? 'var(--color-sage)' :
+                             'var(--color-rose)',
+                    }}
+                  >
+                    {status.label}
+                  </span>
+                ))}
+              </div>
+              <button
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={handleStartEditStatuses}
+              >
+                Edit Statuses
+              </button>
             </>
           )}
         </section>

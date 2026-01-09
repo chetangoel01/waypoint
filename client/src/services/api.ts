@@ -256,6 +256,12 @@ export interface AiStatus {
   source: 'env' | 'database';
 }
 
+export interface StatusOption {
+  key: string;
+  label: string;
+  color: 'gray' | 'blue' | 'amber' | 'green' | 'red';
+}
+
 // Settings endpoints
 export const settingsApi = {
   getAll: () => request<Record<string, string | boolean>>('/settings'),
@@ -268,5 +274,15 @@ export const settingsApi = {
   clearApiKey: () =>
     request<{ message: string }>('/settings/api-key', {
       method: 'DELETE',
+    }),
+  getStatuses: () => request<StatusOption[]>('/settings/statuses'),
+  setStatuses: (statuses: StatusOption[]) =>
+    request<StatusOption[]>('/settings/statuses', {
+      method: 'PUT',
+      body: JSON.stringify({ statuses }),
+    }),
+  resetStatuses: () =>
+    request<StatusOption[]>('/settings/statuses/reset', {
+      method: 'POST',
     }),
 };

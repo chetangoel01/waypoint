@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { generateApi, settingsApi, type CoverLetterTone } from '../services/api';
+import { generateApi, settingsApi, type CoverLetterTone, type StatusOption } from '../services/api';
 
 // Query keys
 export const aiKeys = {
@@ -81,6 +81,37 @@ export function useClearApiKey() {
     mutationFn: () => settingsApi.clearApiKey(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.aiStatus() });
+    },
+  });
+}
+
+// Status options
+export function useStatusOptions() {
+  return useQuery({
+    queryKey: [...settingsKeys.all, 'statuses'] as const,
+    queryFn: settingsApi.getStatuses,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useUpdateStatuses() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (statuses: StatusOption[]) => settingsApi.setStatuses(statuses),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...settingsKeys.all, 'statuses'] });
+    },
+  });
+}
+
+export function useResetStatuses() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => settingsApi.resetStatuses(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...settingsKeys.all, 'statuses'] });
     },
   });
 }

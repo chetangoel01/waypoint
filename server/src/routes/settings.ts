@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { success } from '../middleware/response.js';
-import { Settings, getAllSettings, setSetting, deleteSetting } from '../services/settings.js';
+import { Settings, getAllSettings, setSetting, deleteSetting, type StatusOption } from '../services/settings.js';
 
 const router = Router();
 
@@ -69,6 +69,48 @@ router.put('/api-key', (req: Request, res: Response, next: NextFunction) => {
 router.delete('/api-key', (_req: Request, res: Response) => {
   Settings.clearApiKey();
   res.json(success({ message: 'API key removed successfully' }));
+});
+
+// GET /api/settings/statuses - get status options
+router.get('/statuses', (_req: Request, res: Response) => {
+  const statuses = Settings.getStatusOptions();
+  res.json(success(statuses));
+});
+
+// PUT /api/settings/statuses - update status options
+router.put('/statuses', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { statuses } = req.body;
+
+    if (!Array.isArray(statuses) || statuses.length === 0) {
+      res.status(400).json({ success: false, data: null, error: 'statuses must be a non-empty array' });
+      return;
+    }
+
+    // Validate each status
+    const validColors = ['gray', 'blue', 'amber', 'green', 'red'];
+    for (const status of statuses) {
+      if (!status.key || !status.label) {
+        res.status(400).json({ success: false, data: null, error: 'Each status must have a key and label' });
+        return;
+      }
+      if (status.color && !validColors.includes(status.color)) {
+        status.color = 'gray'; // Default to gray if invalid
+      }
+    }
+
+    Settings.setStatusOptions(statuses as StatusOption[]);
+    res.json(success(statuses));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/settings/statuses/reset - reset to defaults
+router.post('/statuses/reset', (_req: Request, res: Response) => {
+  Settings.resetStatusOptions();
+  const statuses = Settings.getStatusOptions();
+  res.json(success(statuses));
 });
 
 // PUT /api/settings/:key - set a generic setting
