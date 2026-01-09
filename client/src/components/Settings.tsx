@@ -144,8 +144,10 @@ export function Settings() {
 
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <h1 className={styles.pageTitle}>Settings</h1>
-          <p className={styles.pageSubtitle}>Configure your preferences</p>
+          <div className={styles.pageHeaderInfo}>
+            <h1 className={styles.pageTitle}>Settings</h1>
+            <p className={styles.pageSubtitle}>Configure your preferences</p>
+          </div>
         </header>
 
         <section className={styles.profileSection}>

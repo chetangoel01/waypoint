@@ -1,6 +1,8 @@
 // Re-export types that mirror the server types
 // These will be used for type-safe API responses
 
+export type ApplicationStatus = 'saved' | 'applied' | 'phone_screen' | 'interview' | 'offer' | 'rejected' | 'withdrawn';
+
 export interface ApplicationStatusOption {
   key: string;
   label: string;

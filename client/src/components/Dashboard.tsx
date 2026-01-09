@@ -39,8 +39,10 @@ export function Dashboard() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>{getGreeting()}</h1>
-            <p className={styles.pageSubtitle}>Loading your job search data...</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>{getGreeting()}</h1>
+              <p className={styles.pageSubtitle}>Loading your job search data...</p>
+            </div>
           </header>
           <div className={styles.statsGrid}>
             {[1, 2, 3, 4].map((i) => (
@@ -60,8 +62,10 @@ export function Dashboard() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>{getGreeting()}</h1>
-            <p className={styles.pageSubtitle}>Unable to load data</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>{getGreeting()}</h1>
+              <p className={styles.pageSubtitle}>Unable to load data</p>
+            </div>
           </header>
           <div className={styles.emptyState}>
             <div className={styles.emptyStateIcon}>
@@ -85,8 +89,10 @@ export function Dashboard() {
     <div className={styles.mainInner}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <h1 className={styles.pageTitle}>{getGreeting()}</h1>
-          <p className={styles.pageSubtitle}>Here's where you stand in your job search</p>
+          <div className={styles.pageHeaderInfo}>
+            <h1 className={styles.pageTitle}>{getGreeting()}</h1>
+            <p className={styles.pageSubtitle}>Here's where you stand in your job search</p>
+          </div>
         </header>
 
         {/* Stats */}
@@ -172,12 +178,13 @@ export function Dashboard() {
             <p className={styles.emptyStateText}>
               Start tracking your job applications to see your progress here
             </p>
-            <Link 
-              to="/applications" 
+            <Link
+              to="/applications"
               className={`${styles.button} ${styles.buttonPrimary}`}
-              style={{ marginTop: '1rem', display: 'inline-flex' }}
+              style={{ marginTop: 'var(--space-4)', display: 'inline-flex' }}
             >
-              <Icons.Plus /> Add Application
+              <span className={styles.buttonIcon}><Icons.Plus /></span>
+              Add Application
             </Link>
           </div>
         )}

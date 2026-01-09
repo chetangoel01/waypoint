@@ -213,6 +213,10 @@
   font-weight: 400;
 }
 
+.pageHeaderInfo {
+  flex: 1;
+}
+
 /* ============================================
    DASHBOARD COMPONENTS
    ============================================ */
@@ -381,7 +385,16 @@
 
 .emptyStateText {
   font-size: var(--text-sm);
+  color: var(--color-ink-muted);
   margin: 0;
+  line-height: 1.6;
+}
+
+.emptyStateHint {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin: var(--space-3) 0 0 0;
+  opacity: 0.7;
 }
 
 /* ============================================
@@ -425,6 +438,29 @@
 .buttonSecondary:hover {
   background-color: rgba(45, 42, 38, 0.03);
   border-color: var(--border-strong);
+}
+
+.buttonDanger {
+  background-color: var(--color-rose);
+  color: white;
+}
+
+.buttonDanger:hover {
+  background-color: #b91c1c;
+}
+
+.buttonIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.buttonIcon svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* ============================================
@@ -602,6 +638,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
 }
 
 .formGroupFull {

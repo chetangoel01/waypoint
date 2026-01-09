@@ -51,8 +51,10 @@ export function Profile() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Your Profile</h1>
-            <p className={styles.pageSubtitle}>Loading your profile...</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>Your Profile</h1>
+              <p className={styles.pageSubtitle}>Loading your profile...</p>
+            </div>
           </header>
         </div>
       </div>
@@ -64,8 +66,10 @@ export function Profile() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Your Profile</h1>
-            <p className={styles.pageSubtitle}>Unable to load profile</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>Your Profile</h1>
+              <p className={styles.pageSubtitle}>Unable to load profile</p>
+            </div>
           </header>
           <div className={styles.emptyState}>
             <div className={styles.emptyStateIcon}>
@@ -85,8 +89,10 @@ export function Profile() {
     <div className={styles.mainInner}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <h1 className={styles.pageTitle}>Your Profile</h1>
-          <p className={styles.pageSubtitle}>The foundation for all your AI-generated content</p>
+          <div className={styles.pageHeaderInfo}>
+            <h1 className={styles.pageTitle}>Your Profile</h1>
+            <p className={styles.pageSubtitle}>The foundation for all your AI-generated content</p>
+          </div>
         </header>
 
         {/* Resume Upload */}

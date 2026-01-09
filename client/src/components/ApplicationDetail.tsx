@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApplication, useUpdateApplication } from '../hooks';
 import { Icons } from './Icons';
 import { GenerateModal } from './GenerateModal';
+import { Modal, ModalActions } from './Modal';
 import styles from '../App.module.css';
 import type { Contact, ApplicationStatusOption } from '../types';
 
@@ -406,18 +407,18 @@ export function ApplicationDetail() {
               </div>
             ) : (
               <>
-                <button 
+                <button
                   className={`${styles.button} ${styles.buttonSecondary}`}
                   onClick={handleStartEdit}
                 >
-                  <span className={styles.navIcon}><Icons.FileText /></span>
+                  <span className={styles.buttonIcon}><Icons.Edit /></span>
                   Edit
                 </button>
-                <button 
+                <button
                   className={`${styles.button} ${styles.buttonPrimary}`}
                   onClick={handleOpenCoverLetter}
                 >
-                  <span className={styles.navIcon}><Icons.Lightbulb /></span>
+                  <span className={styles.buttonIcon}><Icons.Lightbulb /></span>
                   Generate Cover Letter
                 </button>
               </>
@@ -452,11 +453,11 @@ export function ApplicationDetail() {
               <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
                 Generate AI-powered responses to application questions
               </p>
-              <button 
+              <button
                 className={styles.addQuestionButton}
                 onClick={() => handleOpenCustomResponse()}
               >
-                <span className={styles.navIcon}><Icons.Lightbulb /></span>
+                <span className={styles.buttonIcon}><Icons.Lightbulb /></span>
                 Generate Response to Question
               </button>
             </section>
@@ -537,13 +538,13 @@ export function ApplicationDetail() {
                             <span className={styles.contactLinkIcon}><Icons.LinkedIn /></span>
                           </a>
                         )}
-                        <button 
-                          onClick={() => handleRemoveContact(idx)} 
-                          className={styles.contactLink} 
+                        <button
+                          onClick={() => handleRemoveContact(idx)}
+                          className={styles.contactLink}
                           title="Remove contact"
                           style={{ color: 'var(--color-rose)' }}
                         >
-                          <span className={styles.contactLinkIcon}><Icons.Plus style={{ transform: 'rotate(45deg)' }} /></span>
+                          <span className={styles.contactLinkIcon} style={{ transform: 'rotate(45deg)' }}><Icons.Plus /></span>
                         </button>
                       </div>
                     </div>
@@ -552,12 +553,12 @@ export function ApplicationDetail() {
               ) : (
                 <p className={styles.insightEmpty}>No contacts added yet</p>
               )}
-              <button 
-                className={styles.addQuestionButton} 
+              <button
+                className={styles.addQuestionButton}
                 style={{ marginTop: 'var(--space-3)' }}
                 onClick={() => setShowContactModal(true)}
               >
-                <span className={styles.navIcon}><Icons.Plus /></span>
+                <span className={styles.buttonIcon}><Icons.Plus /></span>
                 Add contact
               </button>
             </section>
@@ -578,220 +579,97 @@ export function ApplicationDetail() {
       />
 
       {/* Add Contact Modal */}
-      {showContactModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowContactModal(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--color-bg)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-6)',
-              width: '100%',
-              maxWidth: '400px',
-              boxShadow: 'var(--shadow-xl)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--color-ink)' }}>
-                Add Contact
-              </h2>
-              <button 
-                onClick={() => setShowContactModal(false)}
-                style={{ 
-                  width: 32, 
-                  height: 32, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-ink-muted)',
-                }}
-              >
-                <span style={{ transform: 'rotate(45deg)', display: 'flex', width: 20, height: 20 }}>
-                  <Icons.Plus />
-                </span>
-              </button>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleAddContact(); }}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Name *</label>
-                <input
-                  type="text"
-                  placeholder="Contact name"
-                  value={newContact.name}
-                  onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Role</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Hiring Manager, Recruiter"
-                  value={newContact.role}
-                  onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Email</label>
-                <input
-                  type="email"
-                  placeholder="email@company.com"
-                  value={newContact.email}
-                  onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>LinkedIn</label>
-                <input
-                  type="text"
-                  placeholder="linkedin.com/in/username"
-                  value={newContact.linkedin}
-                  onChange={(e) => setNewContact({ ...newContact, linkedin: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-5)' }}>
-                <button 
-                  type="button"
-                  className={`${styles.button} ${styles.buttonSecondary}`}
-                  onClick={() => setShowContactModal(false)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className={`${styles.button} ${styles.buttonPrimary}`}
-                  disabled={!newContact.name.trim()}
-                >
-                  Add Contact
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        title="Add Contact"
+        size="sm"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleAddContact(); }}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Name *</label>
+            <input
+              type="text"
+              placeholder="Contact name"
+              value={newContact.name}
+              onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+              autoFocus
+            />
           </div>
-        </div>
-      )}
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Role</label>
+            <input
+              type="text"
+              placeholder="e.g., Hiring Manager, Recruiter"
+              value={newContact.role}
+              onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Email</label>
+            <input
+              type="email"
+              placeholder="email@company.com"
+              value={newContact.email}
+              onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>LinkedIn</label>
+            <input
+              type="text"
+              placeholder="linkedin.com/in/username"
+              value={newContact.linkedin}
+              onChange={(e) => setNewContact({ ...newContact, linkedin: e.target.value })}
+            />
+          </div>
+
+          <ModalActions>
+            <button
+              type="button"
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={() => setShowContactModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              disabled={!newContact.name.trim()}
+            >
+              Add Contact
+            </button>
+          </ModalActions>
+        </form>
+      </Modal>
 
       {/* Edit Statuses Modal */}
-      {showStatusEditor && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowStatusEditor(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--color-bg)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-6)',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '80vh',
-              overflow: 'auto',
-              boxShadow: 'var(--shadow-xl)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--color-ink)' }}>
-                Edit Statuses
-              </h2>
-              <button 
-                onClick={() => setShowStatusEditor(false)}
-                style={{ 
-                  width: 32, 
-                  height: 32, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-ink-muted)',
-                }}
-              >
-                <span style={{ transform: 'rotate(45deg)', display: 'flex', width: 20, height: 20 }}>
-                  <Icons.Plus />
-                </span>
-              </button>
-            </div>
+      <Modal
+        isOpen={showStatusEditor}
+        onClose={() => setShowStatusEditor(false)}
+        title="Edit Statuses"
+        size="md"
+      >
+        <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+          Customize the status options for this application's pipeline
+        </p>
 
-            <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
-              Customize the status options for this application's pipeline
-            </p>
-
-            {/* Existing statuses */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-              {editingStatuses.map((status) => (
-                <div key={status.key} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={status.label}
-                    onChange={(e) => handleUpdateStatusOption(status.key, 'label', e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <select
-                    value={status.color}
-                    onChange={(e) => handleUpdateStatusOption(status.key, 'color', e.target.value)}
-                    style={{ width: 100 }}
-                  >
-                    {colorOptions.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => handleRemoveStatus(status.key)}
-                    style={{ color: 'var(--color-rose)', padding: 'var(--space-1)' }}
-                    title="Remove"
-                  >
-                    <span style={{ width: 16, height: 16, display: 'flex', transform: 'rotate(45deg)' }}>
-                      <Icons.Plus />
-                    </span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add new status */}
-            <div style={{ 
-              display: 'flex', 
-              gap: 'var(--space-2)', 
-              alignItems: 'center', 
-              paddingTop: 'var(--space-3)', 
-              borderTop: '1px solid var(--border-subtle)',
-              marginBottom: 'var(--space-4)'
-            }}>
+        {/* Existing statuses */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+          {editingStatuses.map((status) => (
+            <div key={status.key} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
               <input
                 type="text"
-                placeholder="New status label"
-                value={newStatus.label}
-                onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+                value={status.label}
+                onChange={(e) => handleUpdateStatusOption(status.key, 'label', e.target.value)}
                 style={{ flex: 1 }}
               />
               <select
-                value={newStatus.color}
-                onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as ApplicationStatusOption['color'] })}
+                value={status.color}
+                onChange={(e) => handleUpdateStatusOption(status.key, 'color', e.target.value)}
                 style={{ width: 100 }}
               >
                 {colorOptions.map(c => (
@@ -799,32 +677,69 @@ export function ApplicationDetail() {
                 ))}
               </select>
               <button
-                className={`${styles.button} ${styles.buttonSecondary}`}
-                onClick={handleAddStatus}
-                disabled={!newStatus.label.trim()}
-                style={{ padding: 'var(--space-1) var(--space-3)' }}
+                onClick={() => handleRemoveStatus(status.key)}
+                style={{ color: 'var(--color-rose)', padding: 'var(--space-1)' }}
+                title="Remove"
               >
-                Add
+                <span className={styles.buttonIcon} style={{ transform: 'rotate(45deg)' }}>
+                  <Icons.Plus />
+                </span>
               </button>
             </div>
-
-            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-              <button 
-                className={`${styles.button} ${styles.buttonSecondary}`}
-                onClick={() => setShowStatusEditor(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={handleSaveStatuses}
-              >
-                Save Statuses
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+
+        {/* Add new status */}
+        <div style={{
+          display: 'flex',
+          gap: 'var(--space-2)',
+          alignItems: 'center',
+          paddingTop: 'var(--space-3)',
+          borderTop: '1px solid var(--border-subtle)',
+          marginBottom: 'var(--space-4)'
+        }}>
+          <input
+            type="text"
+            placeholder="New status label"
+            value={newStatus.label}
+            onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+            style={{ flex: 1 }}
+          />
+          <select
+            value={newStatus.color}
+            onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as ApplicationStatusOption['color'] })}
+            style={{ width: 100 }}
+          >
+            {colorOptions.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <button
+            className={`${styles.button} ${styles.buttonSecondary}`}
+            onClick={handleAddStatus}
+            disabled={!newStatus.label.trim()}
+            style={{ padding: 'var(--space-1) var(--space-3)' }}
+          >
+            Add
+          </button>
+        </div>
+
+        <ModalActions>
+          <button
+            className={`${styles.button} ${styles.buttonSecondary}`}
+            onClick={() => setShowStatusEditor(false)}
+          >
+            Cancel
+          </button>
+          <button
+            className={`${styles.button} ${styles.buttonPrimary}`}
+            onClick={handleSaveStatuses}
+          >
+            Save Statuses
+          </button>
+        </ModalActions>
+      </Modal>
     </div>
   );
 }

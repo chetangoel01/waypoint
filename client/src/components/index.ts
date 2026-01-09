@@ -6,3 +6,6 @@ export { Profile } from './Profile';
 export { Documents } from './Documents';
 export { Settings } from './Settings';
 export { GenerateModal } from './GenerateModal';
+export { Modal, ModalActions } from './Modal';
+export { Toast } from './Toast';
+export type { ToastType } from './Toast';

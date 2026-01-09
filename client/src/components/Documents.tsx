@@ -20,30 +20,30 @@ export function Documents() {
     <div className={styles.mainInner}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <div>
+          <div className={styles.pageHeaderInfo}>
             <h1 className={styles.pageTitle}>Documents</h1>
             <p className={styles.pageSubtitle}>Cover letters and responses you've generated</p>
           </div>
-          <button 
+          <button
             className={`${styles.button} ${styles.buttonPrimary}`}
             onClick={handleGenerate}
           >
-            <span className={styles.navIcon}><Icons.Lightbulb /></span>
+            <span className={styles.buttonIcon}><Icons.Lightbulb /></span>
             Generate New
           </button>
         </header>
 
         {showComingSoon && (
-          <div 
+          <div
             className={styles.profileSection}
-            style={{ 
-              backgroundColor: 'var(--color-terracotta-light)', 
+            style={{
+              backgroundColor: 'var(--color-terracotta-light)',
               borderColor: 'var(--color-terracotta)',
               marginBottom: 'var(--space-6)'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-              <span className={styles.navIcon} style={{ color: 'var(--color-terracotta)', marginTop: 2 }}>
+              <span className={styles.buttonIcon} style={{ color: 'var(--color-terracotta)', marginTop: 2 }}>
                 <Icons.Lightbulb />
               </span>
               <div>
@@ -51,15 +51,15 @@ export function Documents() {
                   {aiStatus?.configured ? 'Coming Soon' : 'Setup Required'}
                 </p>
                 <p className={styles.formHint}>
-                  {aiStatus?.configured 
+                  {aiStatus?.configured
                     ? 'Standalone document generation is coming soon. For now, you can generate cover letters and responses from each application\'s detail page.'
-                    : 'To generate content with AI, please add your Gemini API key in Settings first.'}
+                    : 'To generate content with AI, please add your OpenAI API key in Settings first.'}
                 </p>
-                <button 
+                <button
                   onClick={() => setShowComingSoon(false)}
-                  style={{ 
-                    marginTop: 'var(--space-2)', 
-                    fontSize: 'var(--text-sm)', 
+                  style={{
+                    marginTop: 'var(--space-2)',
+                    fontSize: 'var(--text-sm)',
                     color: 'var(--color-terracotta)',
                     textDecoration: 'underline',
                     textUnderlineOffset: '2px',
@@ -80,7 +80,7 @@ export function Documents() {
           <p className={styles.emptyStateText}>
             When you generate cover letters or custom responses from an application, they'll appear here.
           </p>
-          <p className={styles.emptyStateText} style={{ marginTop: 'var(--space-3)', opacity: 0.7 }}>
+          <p className={styles.emptyStateHint}>
             Tip: Go to an application and click "Generate Cover Letter" or "Generate Response to Question"
           </p>
         </div>

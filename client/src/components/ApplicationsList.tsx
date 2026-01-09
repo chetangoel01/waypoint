@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApplications, useCreateApplication, useDeleteApplication } from '../hooks';
 import { Icons } from './Icons';
+import { Modal, ModalActions } from './Modal';
 import styles from '../App.module.css';
-import type { ApplicationStatus } from '../types';
 
-const getStatusClass = (status: ApplicationStatus) => {
-  const map: Record<ApplicationStatus, string> = {
+const getStatusClass = (status: string) => {
+  const map: Record<string, string> = {
     saved: styles.statusSaved,
     applied: styles.statusApplied,
     phone_screen: styles.statusApplied,
@@ -49,8 +49,10 @@ export function ApplicationsList() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Applications</h1>
-            <p className={styles.pageSubtitle}>Loading your applications...</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>Applications</h1>
+              <p className={styles.pageSubtitle}>Loading your applications...</p>
+            </div>
           </header>
           <div className={styles.applicationsList}>
             {[1, 2, 3].map((i) => (
@@ -73,8 +75,10 @@ export function ApplicationsList() {
       <div className={styles.mainInner}>
         <div className={styles.page}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Applications</h1>
-            <p className={styles.pageSubtitle}>Unable to load applications</p>
+            <div className={styles.pageHeaderInfo}>
+              <h1 className={styles.pageTitle}>Applications</h1>
+              <p className={styles.pageSubtitle}>Unable to load applications</p>
+            </div>
           </header>
           <div className={styles.emptyState}>
             <div className={styles.emptyStateIcon}>
@@ -109,6 +113,7 @@ export function ApplicationsList() {
         date_applied: null,
         contacts: null,
         notes: null,
+        custom_statuses: null,
       });
       setIsCreateModalOpen(false);
       setNewApp({ company: '', role: '', url: '' });
@@ -122,17 +127,17 @@ export function ApplicationsList() {
     <div className={styles.mainInner}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <div>
+          <div className={styles.pageHeaderInfo}>
             <h1 className={styles.pageTitle}>Applications</h1>
             <p className={styles.pageSubtitle}>
               {applications?.length ?? 0} application{applications?.length !== 1 ? 's' : ''} tracked
             </p>
           </div>
-          <button 
+          <button
             className={`${styles.button} ${styles.buttonPrimary}`}
             onClick={() => setIsCreateModalOpen(true)}
           >
-            <span className={styles.navIcon}><Icons.Plus /></span>
+            <span className={styles.buttonIcon}><Icons.Plus /></span>
             New Application
           </button>
         </header>
@@ -166,14 +171,14 @@ export function ApplicationsList() {
                     onClick={() => navigate(`/applications/${app.id}`)}
                     title="Edit"
                   >
-                    <span className={styles.navIcon}><Icons.Edit /></span>
+                    <span className={styles.buttonIcon}><Icons.Edit /></span>
                   </button>
                   <button
                     className={`${styles.applicationActionBtn} ${styles.applicationActionBtnDanger}`}
                     onClick={() => setDeleteConfirm({ id: app.id, company: app.company })}
                     title="Delete"
                   >
-                    <span className={styles.navIcon}><Icons.Trash /></span>
+                    <span className={styles.buttonIcon}><Icons.Trash /></span>
                   </button>
                 </div>
               </div>
@@ -188,12 +193,12 @@ export function ApplicationsList() {
             <p className={styles.emptyStateText}>
               Start tracking your job applications to see them here
             </p>
-            <button 
+            <button
               className={`${styles.button} ${styles.buttonPrimary}`}
               onClick={() => setIsCreateModalOpen(true)}
               style={{ marginTop: 'var(--space-4)' }}
             >
-              <span className={styles.navIcon}><Icons.Plus /></span>
+              <span className={styles.buttonIcon}><Icons.Plus /></span>
               Add Your First Application
             </button>
           </div>
@@ -201,161 +206,95 @@ export function ApplicationsList() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setDeleteConfirm(null)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--color-bg)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-6)',
-              width: '100%',
-              maxWidth: '400px',
-              boxShadow: 'var(--shadow-xl)',
-            }}
-            onClick={(e) => e.stopPropagation()}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete Application?"
+        size="sm"
+      >
+        <p className={styles.formHint}>
+          Are you sure you want to delete the application for <strong>{deleteConfirm?.company}</strong>? This action cannot be undone.
+        </p>
+        <ModalActions>
+          <button
+            className={`${styles.button} ${styles.buttonSecondary}`}
+            onClick={() => setDeleteConfirm(null)}
           >
-            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-ink)', marginBottom: 'var(--space-3)' }}>
-              Delete Application?
-            </h2>
-            <p style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-5)' }}>
-              Are you sure you want to delete the application for <strong>{deleteConfirm.company}</strong>? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-              <button 
-                className={`${styles.button} ${styles.buttonSecondary}`}
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Cancel
-              </button>
-              <button 
-                className={`${styles.button}`}
-                style={{ backgroundColor: 'var(--color-rose)', color: 'white' }}
-                onClick={handleDeleteApplication}
-                disabled={deleteApplication.isPending}
-              >
-                {deleteApplication.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            Cancel
+          </button>
+          <button
+            className={`${styles.button} ${styles.buttonDanger}`}
+            onClick={handleDeleteApplication}
+            disabled={deleteApplication.isPending}
+          >
+            {deleteApplication.isPending ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalActions>
+      </Modal>
 
       {/* Create Application Modal */}
-      {isCreateModalOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setIsCreateModalOpen(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--color-bg)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-6)',
-              width: '100%',
-              maxWidth: '480px',
-              boxShadow: 'var(--shadow-xl)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--color-ink)' }}>
-                New Application
-              </h2>
-              <button 
-                onClick={() => setIsCreateModalOpen(false)}
-                style={{ 
-                  width: 32, 
-                  height: 32, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-ink-muted)',
-                }}
-              >
-                <span style={{ transform: 'rotate(45deg)', display: 'flex', width: 20, height: 20 }}>
-                  <Icons.Plus />
-                </span>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateApplication}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Company *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Acme Inc."
-                  value={newApp.company}
-                  onChange={(e) => setNewApp({ ...newApp, company: e.target.value })}
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Role *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Senior Software Engineer"
-                  value={newApp.role}
-                  onChange={(e) => setNewApp({ ...newApp, role: e.target.value })}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Job URL (optional)</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={newApp.url}
-                  onChange={(e) => setNewApp({ ...newApp, url: e.target.value })}
-                />
-              </div>
-
-              {createApplication.error && (
-                <p style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>
-                  {createApplication.error instanceof Error ? createApplication.error.message : 'Failed to create application'}
-                </p>
-              )}
-
-              <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-5)' }}>
-                <button 
-                  type="button"
-                  className={`${styles.button} ${styles.buttonSecondary}`}
-                  onClick={() => setIsCreateModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className={`${styles.button} ${styles.buttonPrimary}`}
-                  disabled={!newApp.company.trim() || !newApp.role.trim() || createApplication.isPending}
-                >
-                  {createApplication.isPending ? 'Creating...' : 'Create Application'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="New Application"
+        size="md"
+      >
+        <form onSubmit={handleCreateApplication}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Company *</label>
+            <input
+              type="text"
+              placeholder="e.g., Acme Inc."
+              value={newApp.company}
+              onChange={(e) => setNewApp({ ...newApp, company: e.target.value })}
+              autoFocus
+            />
           </div>
-        </div>
-      )}
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Role *</label>
+            <input
+              type="text"
+              placeholder="e.g., Senior Software Engineer"
+              value={newApp.role}
+              onChange={(e) => setNewApp({ ...newApp, role: e.target.value })}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Job URL (optional)</label>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={newApp.url}
+              onChange={(e) => setNewApp({ ...newApp, url: e.target.value })}
+            />
+          </div>
+
+          {createApplication.error && (
+            <p style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>
+              {createApplication.error instanceof Error ? createApplication.error.message : 'Failed to create application'}
+            </p>
+          )}
+
+          <ModalActions>
+            <button
+              type="button"
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={() => setIsCreateModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              disabled={!newApp.company.trim() || !newApp.role.trim() || createApplication.isPending}
+            >
+              {createApplication.isPending ? 'Creating...' : 'Create Application'}
+            </button>
+          </ModalActions>
+        </form>
+      </Modal>
     </div>
   );
 }
