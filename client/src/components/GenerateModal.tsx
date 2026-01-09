@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useAiStatus, useGenerateCoverLetter, useGenerateCustomResponse, useRefineContent } from '../hooks';
+import { useAiStatus, useGenerateCoverLetter, useGenerateCustomResponse, useRefineContent, useCreateDocument, useAddDocumentVersion } from '../hooks';
 import { Icons } from './Icons';
 import styles from './GenerateModal.module.css';
 import type { CoverLetterTone } from '../services/api';
+import type { DocumentType } from '../types';
 
 interface GenerateModalProps {
   isOpen: boolean;
@@ -29,14 +30,18 @@ export function GenerateModal({
   const generateCoverLetter = useGenerateCoverLetter();
   const generateCustomResponse = useGenerateCustomResponse();
   const refineContent = useRefineContent();
+  const createDocument = useCreateDocument();
+  const addDocumentVersion = useAddDocumentVersion();
 
   const [step, setStep] = useState<'configure' | 'generate' | 'result'>('generate');
   const [tone, setTone] = useState<CoverLetterTone>('professional');
   const [additionalContext, setAdditionalContext] = useState('');
   const [question, setQuestion] = useState(initialQuestion);
   const [generatedContent, setGeneratedContent] = useState('');
+  const [promptUsed, setPromptUsed] = useState('');
   const [refineInstruction, setRefineInstruction] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const isLoading = generateCoverLetter.isPending || generateCustomResponse.isPending;
   const error = generateCoverLetter.error || generateCustomResponse.error;
@@ -46,7 +51,9 @@ export function GenerateModal({
   const handleGenerate = async () => {
     try {
       let result;
+      let prompt = '';
       if (mode === 'cover-letter') {
+        prompt = `Tone: ${tone}${additionalContext ? `\nContext: ${additionalContext}` : ''}`;
         result = await generateCoverLetter.mutateAsync({
           applicationId,
           additionalContext: additionalContext || undefined,
@@ -54,6 +61,7 @@ export function GenerateModal({
         });
       } else {
         if (!question.trim()) return;
+        prompt = `Question: ${question.trim()}${additionalContext ? `\nContext: ${additionalContext}` : ''}`;
         result = await generateCustomResponse.mutateAsync({
           applicationId,
           question: question.trim(),
@@ -61,6 +69,7 @@ export function GenerateModal({
         });
       }
       setGeneratedContent(result.content);
+      setPromptUsed(prompt);
       setStep('result');
     } catch {
       // Error is handled by the mutation
@@ -88,9 +97,40 @@ export function GenerateModal({
     await navigator.clipboard.writeText(generatedContent);
   };
 
-  const handleSave = () => {
-    onSave?.(generatedContent);
-    onClose();
+  const handleSave = async () => {
+    if (!generatedContent.trim()) return;
+    setIsSaving(true);
+
+    try {
+      // Determine document type
+      const docType: DocumentType = mode === 'cover-letter' ? 'cover_letter' : 'custom_question';
+
+      // Create the document
+      const document = await createDocument.mutateAsync({
+        application_id: applicationId,
+        type: docType,
+        question: mode === 'custom-response' ? question.trim() : null,
+        key_points: null,
+      });
+
+      // Add the initial version
+      await addDocumentVersion.mutateAsync({
+        documentId: document.id,
+        data: {
+          content: generatedContent.trim(),
+          prompt_used: promptUsed || undefined,
+          is_ai_generated: true,
+        },
+      });
+
+      // Also call onSave callback if provided (for backward compatibility)
+      onSave?.(generatedContent);
+      onClose();
+    } catch {
+      // Error handled by mutations
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClose = () => {
@@ -99,6 +139,7 @@ export function GenerateModal({
     setAdditionalContext('');
     setQuestion(initialQuestion);
     setGeneratedContent('');
+    setPromptUsed('');
     setRefineInstruction('');
     generateCoverLetter.reset();
     generateCustomResponse.reset();
@@ -279,8 +320,18 @@ export function GenerateModal({
                 <button className={styles.iconButton} onClick={handleCopy} title="Copy to clipboard">
                   <Icons.FileText />
                 </button>
-                <button className={styles.primaryButton} onClick={handleSave}>
-                  Save
+                <button className={styles.primaryButton} onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <span className={styles.spinner} />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Icons.Save />
+                      Save
+                    </>
+                  )}
                 </button>
               </div>
             </div>

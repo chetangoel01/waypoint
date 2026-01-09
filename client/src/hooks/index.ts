@@ -31,3 +31,15 @@ export {
   aiKeys,
   settingsKeys,
 } from './useAi';
+
+// Document hooks
+export {
+  useDocuments,
+  useDocument,
+  useDocumentVersions,
+  useCreateDocument,
+  useUpdateDocument,
+  useDeleteDocument,
+  useAddDocumentVersion,
+  documentKeys,
+} from './useDocuments';

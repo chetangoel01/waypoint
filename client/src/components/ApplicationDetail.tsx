@@ -133,20 +133,6 @@ export function ApplicationDetail() {
     setShowGenerateModal(true);
   };
 
-  const handleSaveGenerated = (content: string) => {
-    // Save to notes with clear formatting
-    const label = generateMode === 'cover-letter' ? 'Cover Letter' : 'Response';
-    const timestamp = new Date().toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      hour: 'numeric', 
-      minute: '2-digit' 
-    });
-    const newContent = `\n\n--- Generated ${label} (${timestamp}) ---\n${content}`;
-    const updatedNotes = (app.notes || '') + newContent;
-    updateApplication.mutate({ id: app.id, data: { notes: updatedNotes } });
-  };
-
   const handleStartEdit = () => {
     setEditForm({
       company: app.company,
@@ -575,7 +561,6 @@ export function ApplicationDetail() {
         roleName={app.role}
         mode={generateMode}
         initialQuestion={initialQuestion}
-        onSave={handleSaveGenerated}
       />
 
       {/* Add Contact Modal */}
