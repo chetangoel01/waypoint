@@ -41,6 +41,15 @@
   max-width: 600px;
 }
 
+.modalXl {
+  max-width: 800px;
+}
+
+.modalFull {
+  max-width: 1000px;
+  height: 85vh;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;

@@ -392,9 +392,9 @@
 
 .emptyStateHint {
   font-size: var(--text-sm);
-  color: var(--color-ink-muted);
-  margin: var(--space-3) 0 0 0;
-  opacity: 0.7;
+  font-style: italic;
+  color: var(--color-ink-light);
+  margin: var(--space-4) 0 0 0;
 }
 
 /* ============================================

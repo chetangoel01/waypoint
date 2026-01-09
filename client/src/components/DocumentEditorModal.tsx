@@ -74,7 +74,7 @@ export function DocumentEditorModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={isLoading ? 'Loading...' : typeLabel}
-      size="lg"
+      size="full"
     >
       {isLoading ? (
         <div className={styles.emptyState}>
@@ -107,12 +107,12 @@ export function DocumentEditorModal({
           )}
 
           {/* Content editor */}
-          <div className={styles.resultContainer}>
+          <div className={styles.resultContainer} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <textarea
               className={styles.resultTextarea}
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
-              rows={14}
+              style={{ flex: 1, minHeight: '400px', resize: 'vertical' }}
               placeholder="Document content..."
             />
           </div>

@@ -6,7 +6,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   children: React.ReactNode;
 }
 
@@ -36,7 +36,14 @@ export function Modal({ isOpen, onClose, title, size = 'md', children }: ModalPr
     if (e.target === overlayRef.current) onClose();
   };
 
-  const sizeClass = size === 'sm' ? styles.modalSm : size === 'lg' ? styles.modalLg : styles.modalMd;
+  const sizeClasses: Record<string, string> = {
+    sm: styles.modalSm,
+    md: styles.modalMd,
+    lg: styles.modalLg,
+    xl: styles.modalXl,
+    full: styles.modalFull,
+  };
+  const sizeClass = sizeClasses[size] || styles.modalMd;
 
   return (
     <div className={styles.overlay} ref={overlayRef} onClick={handleOverlayClick}>

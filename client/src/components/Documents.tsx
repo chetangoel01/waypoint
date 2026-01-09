@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDocuments, useDeleteDocument, useApplications, useAddDocumentVersion } from '../hooks';
+import { useDocuments, useDeleteDocument, useApplications, useAddDocumentVersion, useAiStatus } from '../hooks';
 import { Icons } from './Icons';
 import { Modal, ModalActions } from './Modal';
 import { DocumentEditorModal } from './DocumentEditorModal';
@@ -10,6 +10,7 @@ import type { Document } from '../types';
 export function Documents() {
   const { data: documents, isLoading, error } = useDocuments();
   const { data: applications } = useApplications();
+  const { data: aiStatus } = useAiStatus();
   const deleteDocument = useDeleteDocument();
   const addVersion = useAddDocumentVersion();
 
@@ -17,6 +18,13 @@ export function Documents() {
   const [showEditor, setShowEditor] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<Document | null>(null);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+
+  const handleGenerateNew = () => {
+    // For now, show coming soon message
+    // In the future, this could open a standalone document generation modal
+    setShowComingSoon(true);
+  };
 
   // Get application name for a document
   const getApplicationName = (applicationId: number | null) => {
@@ -142,7 +150,54 @@ export function Documents() {
               {sortedDocuments.length} document{sortedDocuments.length !== 1 ? 's' : ''} saved
             </p>
           </div>
+          <button
+            className={`${styles.button} ${styles.buttonPrimary}`}
+            onClick={handleGenerateNew}
+          >
+            <span className={styles.buttonIcon}><Icons.Lightbulb /></span>
+            Generate New
+          </button>
         </header>
+
+        {/* Coming Soon Notice */}
+        {showComingSoon && (
+          <div
+            className={styles.profileSection}
+            style={{
+              backgroundColor: 'var(--color-terracotta-light)',
+              borderColor: 'var(--color-terracotta)',
+              marginBottom: 'var(--space-6)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+              <span className={styles.buttonIcon} style={{ color: 'var(--color-terracotta)', marginTop: 2 }}>
+                <Icons.Lightbulb />
+              </span>
+              <div>
+                <p style={{ fontWeight: 600, color: 'var(--color-terracotta-dark)', marginBottom: 'var(--space-1)' }}>
+                  {aiStatus?.configured ? 'Coming Soon' : 'Setup Required'}
+                </p>
+                <p className={styles.formHint}>
+                  {aiStatus?.configured
+                    ? 'Standalone document generation is coming soon. For now, you can generate cover letters and responses from each application\'s detail page.'
+                    : 'To generate content with AI, please add your OpenAI API key in Settings first.'}
+                </p>
+                <button
+                  onClick={() => setShowComingSoon(false)}
+                  style={{
+                    marginTop: 'var(--space-2)',
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-terracotta)',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {sortedDocuments.length > 0 ? (
           <div className={styles.applicationsList}>
