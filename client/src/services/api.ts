@@ -259,13 +259,13 @@ export interface AiStatus {
 export const settingsApi = {
   getAll: () => request<Record<string, string | boolean>>('/settings'),
   getAiStatus: () => request<AiStatus>('/settings/ai-status'),
-  setGeminiApiKey: (apiKey: string) =>
-    request<{ message: string; keyPreview: string }>('/settings/gemini-api-key', {
+  setApiKey: (apiKey: string) =>
+    request<{ message: string; keyPreview: string }>('/settings/api-key', {
       method: 'PUT',
       body: JSON.stringify({ apiKey }),
     }),
-  clearGeminiApiKey: () =>
-    request<{ message: string }>('/settings/gemini-api-key', {
+  clearApiKey: () =>
+    request<{ message: string }>('/settings/api-key', {
       method: 'DELETE',
     }),
 };

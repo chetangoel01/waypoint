@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { Settings } from './settings.js';
 import { getProfile } from './profile.js';
 import * as experienceService from './experience.js';
@@ -32,13 +32,13 @@ export interface GenerationResult {
   promptUsed: string;
 }
 
-// Get or create Gemini client
-function getGeminiClient(): GoogleGenerativeAI {
-  const apiKey = Settings.getGeminiApiKey();
+// Get OpenAI client
+function getOpenAIClient(): OpenAI {
+  const apiKey = Settings.getApiKey();
   if (!apiKey) {
-    validationError('Gemini API key not configured. Please add your API key in Settings.');
+    validationError('OpenAI API key not configured. Please add your API key in Settings.');
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new OpenAI({ apiKey });
 }
 
 // Build context about the applicant from their profile data
@@ -153,8 +153,7 @@ function buildJobContext(applicationId: number): string {
 
 // Generate a cover letter
 export async function generateCoverLetter(input: GenerateCoverLetterInput): Promise<GenerationResult> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  const openai = getOpenAIClient();
 
   const applicantContext = await buildApplicantContext();
   const jobContext = buildJobContext(input.applicationId);
@@ -197,9 +196,17 @@ Write the cover letter now. Do not include any explanations or meta-commentary, 
 
   const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 
-  const result = await model.generateContent(fullPrompt);
-  const response = await result.response;
-  const content = response.text();
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 1000,
+  });
+
+  const content = response.choices[0]?.message?.content || '';
 
   return {
     content,
@@ -209,8 +216,7 @@ Write the cover letter now. Do not include any explanations or meta-commentary, 
 
 // Generate a response to a custom question
 export async function generateCustomResponse(input: GenerateCustomResponseInput): Promise<GenerationResult> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  const openai = getOpenAIClient();
 
   const applicantContext = await buildApplicantContext();
   const jobContext = buildJobContext(input.applicationId);
@@ -245,9 +251,17 @@ Write the response now. Do not include any explanations or meta-commentary, just
 
   const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 
-  const result = await model.generateContent(fullPrompt);
-  const response = await result.response;
-  const content = response.text();
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 800,
+  });
+
+  const content = response.choices[0]?.message?.content || '';
 
   return {
     content,
@@ -257,8 +271,7 @@ Write the response now. Do not include any explanations or meta-commentary, just
 
 // Refine existing content based on instructions
 export async function refineContent(input: RefineContentInput): Promise<GenerationResult> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  const openai = getOpenAIClient();
 
   const systemPrompt = `You are an expert editor helping refine job application content.
 
@@ -282,9 +295,17 @@ Write the refined content now. Do not include any explanations or meta-commentar
 
   const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 
-  const result = await model.generateContent(fullPrompt);
-  const response = await result.response;
-  const content = response.text();
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 1000,
+  });
+
+  const content = response.choices[0]?.message?.content || '';
 
   return {
     content,
@@ -294,5 +315,5 @@ Write the refined content now. Do not include any explanations or meta-commentar
 
 // Check if AI is configured
 export function isAiConfigured(): boolean {
-  return !!Settings.getGeminiApiKey();
+  return !!Settings.getApiKey();
 }

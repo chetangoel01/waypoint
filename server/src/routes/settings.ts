@@ -11,10 +11,10 @@ router.get('/', (_req: Request, res: Response) => {
   // Mask sensitive values
   const masked: Record<string, string | boolean> = {};
   for (const [key, value] of Object.entries(settings)) {
-    if (key === Settings.GEMINI_API_KEY) {
+    if (key === Settings.OPENAI_API_KEY) {
       // Only show if key is set, but mask the actual value
       masked[key] = value ? '••••••••' + value.slice(-4) : '';
-      masked['gemini_api_key_set'] = !!value;
+      masked['api_key_set'] = !!value;
     } else {
       masked[key] = value;
     }
@@ -25,15 +25,15 @@ router.get('/', (_req: Request, res: Response) => {
 
 // GET /api/settings/ai-status - check if AI is configured
 router.get('/ai-status', (_req: Request, res: Response) => {
-  const apiKey = Settings.getGeminiApiKey();
+  const apiKey = Settings.getApiKey();
   res.json(success({
     configured: !!apiKey,
-    keyPreview: apiKey ? '••••••••' + apiKey.slice(-4) : null,
+    keyPreview: apiKey ? '••••' + apiKey.slice(-4) : null,
   }));
 });
 
-// PUT /api/settings/gemini-api-key - set Gemini API key
-router.put('/gemini-api-key', (req: Request, res: Response, next: NextFunction) => {
+// PUT /api/settings/api-key - set OpenAI API key
+router.put('/api-key', (req: Request, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = req.body;
 
@@ -42,30 +42,30 @@ router.put('/gemini-api-key', (req: Request, res: Response, next: NextFunction) 
       return;
     }
 
-    // Basic validation - Gemini API keys start with "AI"
-    if (!apiKey.startsWith('AI') || apiKey.length < 20) {
+    // Basic validation - OpenAI API keys start with "sk-"
+    if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
       res.status(400).json({ 
         success: false, 
         data: null, 
-        error: 'Invalid API key format. Gemini API keys typically start with "AI" and are at least 20 characters.' 
+        error: 'Invalid API key format. OpenAI API keys start with "sk-".' 
       });
       return;
     }
 
-    Settings.setGeminiApiKey(apiKey);
+    Settings.setApiKey(apiKey);
 
     res.json(success({
       message: 'API key saved successfully',
-      keyPreview: '••••••••' + apiKey.slice(-4),
+      keyPreview: '••••' + apiKey.slice(-4),
     }));
   } catch (err) {
     next(err);
   }
 });
 
-// DELETE /api/settings/gemini-api-key - remove Gemini API key
-router.delete('/gemini-api-key', (_req: Request, res: Response) => {
-  Settings.clearGeminiApiKey();
+// DELETE /api/settings/api-key - remove API key
+router.delete('/api-key', (_req: Request, res: Response) => {
+  Settings.clearApiKey();
   res.json(success({ message: 'API key removed successfully' }));
 });
 
@@ -76,11 +76,11 @@ router.put('/:key', (req: Request, res: Response, next: NextFunction) => {
     const { value } = req.body;
 
     // Don't allow setting the API key through generic endpoint
-    if (key === Settings.GEMINI_API_KEY) {
+    if (key === Settings.OPENAI_API_KEY) {
       res.status(400).json({ 
         success: false, 
         data: null, 
-        error: 'Use PUT /api/settings/gemini-api-key to set the API key' 
+        error: 'Use PUT /api/settings/api-key to set the API key' 
       });
       return;
     }
@@ -102,11 +102,11 @@ router.delete('/:key', (req: Request, res: Response) => {
   const { key } = req.params;
   
   // Don't allow deleting the API key through generic endpoint
-  if (key === Settings.GEMINI_API_KEY) {
+  if (key === Settings.OPENAI_API_KEY) {
     res.status(400).json({ 
       success: false, 
       data: null, 
-      error: 'Use DELETE /api/settings/gemini-api-key to remove the API key' 
+      error: 'Use DELETE /api/settings/api-key to remove the API key' 
     });
     return;
   }

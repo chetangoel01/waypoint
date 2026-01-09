@@ -58,17 +58,17 @@ export function getAllSettings(): Record<string, string> {
 
 // Specific settings helpers
 export const Settings = {
-  GEMINI_API_KEY: 'gemini_api_key',
+  OPENAI_API_KEY: 'openai_api_key',
   
-  getGeminiApiKey(): string | null {
-    return getSetting(Settings.GEMINI_API_KEY);
+  getApiKey(): string | null {
+    return getSetting(Settings.OPENAI_API_KEY);
   },
   
-  setGeminiApiKey(apiKey: string): void {
-    setSetting(Settings.GEMINI_API_KEY, apiKey);
+  setApiKey(apiKey: string): void {
+    setSetting(Settings.OPENAI_API_KEY, apiKey);
   },
   
-  clearGeminiApiKey(): void {
-    deleteSetting(Settings.GEMINI_API_KEY);
+  clearApiKey(): void {
+    deleteSetting(Settings.OPENAI_API_KEY);
   },
 };

@@ -119,16 +119,16 @@ export function Settings() {
 
           {/* API Key input */}
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Gemini API Key</label>
+            <label className={styles.formLabel}>OpenAI API Key</label>
             <p className={styles.formHint}>
               Required for AI-powered content generation.{' '}
               <a 
-                href="https://aistudio.google.com/app/apikey" 
+                href="https://platform.openai.com/api-keys" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className={styles.sectionLink}
               >
-                Get your free API key <Icons.ExternalLink />
+                Get your API key <Icons.ExternalLink />
               </a>
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-2)', maxWidth: '500px', marginTop: 'var(--space-3)' }}>

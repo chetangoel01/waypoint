@@ -59,24 +59,24 @@ export function useRefineContent() {
   });
 }
 
-// Save Gemini API key
+// Save OpenAI API key
 export function useSaveApiKey() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (apiKey: string) => settingsApi.setGeminiApiKey(apiKey),
+    mutationFn: (apiKey: string) => settingsApi.setApiKey(apiKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.aiStatus() });
     },
   });
 }
 
-// Clear Gemini API key
+// Clear OpenAI API key
 export function useClearApiKey() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => settingsApi.clearGeminiApiKey(),
+    mutationFn: () => settingsApi.clearApiKey(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.aiStatus() });
     },
