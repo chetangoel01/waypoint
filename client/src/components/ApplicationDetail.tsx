@@ -236,34 +236,66 @@ export function ApplicationDetail() {
           <div className={styles.detailLogo}>{(isEditing ? editForm.company : app.company).charAt(0)}</div>
           <div className={styles.detailInfo}>
             {isEditing ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', flex: 1 }}>
-                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.formLabel}>Company</label>
-                  <input
-                    type="text"
-                    value={editForm.company}
-                    onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
-                    placeholder="Company name"
-                  />
-                </div>
-                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.formLabel}>Role</label>
-                  <input
-                    type="text"
-                    value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    placeholder="Role"
-                  />
-                </div>
-                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.formLabel}>Job URL</label>
-                  <input
-                    type="url"
-                    value={editForm.url}
-                    onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
+              <div className={styles.detailInfo}>
+                <input
+                  type="text"
+                  value={editForm.company}
+                  onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                  placeholder="Company name"
+                  autoFocus
+                  style={{
+                    font: 'inherit',
+                    fontSize: 'var(--text-2xl)',
+                    fontWeight: 600,
+                    color: 'var(--color-ink)',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '2px solid var(--color-terracotta)',
+                    borderRadius: 0,
+                    padding: '0 0 2px 0',
+                    margin: 0,
+                    width: '100%',
+                    outline: 'none',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  placeholder="Role"
+                  style={{
+                    font: 'inherit',
+                    fontSize: 'var(--text-lg)',
+                    color: 'var(--color-ink-muted)',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    borderRadius: 0,
+                    padding: '0 0 2px 0',
+                    margin: 0,
+                    width: '100%',
+                    outline: 'none',
+                  }}
+                />
+                <input
+                  type="url"
+                  value={editForm.url}
+                  onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                  placeholder="Add job posting URL..."
+                  style={{
+                    font: 'inherit',
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-ink-muted)',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px dashed var(--border-subtle)',
+                    borderRadius: 0,
+                    padding: '2px 0',
+                    margin: 0,
+                    width: '100%',
+                    outline: 'none',
+                  }}
+                />
               </div>
             ) : (
               <>
@@ -342,21 +374,30 @@ export function ApplicationDetail() {
           </div>
           <div className={styles.detailActions}>
             {isEditing ? (
-              <>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                 <button 
-                  className={`${styles.button} ${styles.buttonSecondary}`}
                   onClick={() => setIsEditing(false)}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-ink-muted)',
+                    padding: 'var(--space-1) var(--space-2)',
+                  }}
                 >
                   Cancel
                 </button>
                 <button 
-                  className={`${styles.button} ${styles.buttonPrimary}`}
                   onClick={handleSaveEdit}
                   disabled={!editForm.company.trim() || !editForm.role.trim()}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-terracotta)',
+                    fontWeight: 500,
+                    padding: 'var(--space-1) var(--space-2)',
+                  }}
                 >
                   Save
                 </button>
-              </>
+              </div>
             ) : (
               <>
                 <button 
