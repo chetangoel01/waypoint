@@ -7,6 +7,8 @@ import educationRoutes from './education.js';
 import skillsRoutes from './skills.js';
 import projectsRoutes from './projects.js';
 import storiesRoutes from './stories.js';
+import generateRoutes from './generate.js';
+import settingsRoutes from './settings.js';
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.use('/education', educationRoutes);
 router.use('/skills', skillsRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/stories', storiesRoutes);
+router.use('/generate', generateRoutes);
+router.use('/settings', settingsRoutes);
 
 export default router;
