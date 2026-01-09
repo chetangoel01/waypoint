@@ -220,3 +220,52 @@ export const storiesApi = {
 export const healthApi = {
   check: () => request<{ status: string; timestamp: string }>('/health'),
 };
+
+// AI Generation types
+export interface GenerationResult {
+  content: string;
+  promptUsed: string;
+}
+
+export type CoverLetterTone = 'professional' | 'conversational' | 'enthusiastic';
+
+// AI Generation endpoints
+export const generateApi = {
+  coverLetter: (applicationId: number, options?: { additionalContext?: string; tone?: CoverLetterTone }) =>
+    request<GenerationResult>('/generate/cover-letter', {
+      method: 'POST',
+      body: JSON.stringify({ applicationId, ...options }),
+    }),
+  customResponse: (applicationId: number, question: string, maxLength?: number) =>
+    request<GenerationResult>('/generate/custom-response', {
+      method: 'POST',
+      body: JSON.stringify({ applicationId, question, maxLength }),
+    }),
+  refine: (content: string, instruction: string) =>
+    request<GenerationResult>('/generate/refine', {
+      method: 'POST',
+      body: JSON.stringify({ content, instruction }),
+    }),
+  status: () => request<{ configured: boolean }>('/generate/status'),
+};
+
+// Settings types
+export interface AiStatus {
+  configured: boolean;
+  keyPreview: string | null;
+}
+
+// Settings endpoints
+export const settingsApi = {
+  getAll: () => request<Record<string, string | boolean>>('/settings'),
+  getAiStatus: () => request<AiStatus>('/settings/ai-status'),
+  setGeminiApiKey: (apiKey: string) =>
+    request<{ message: string; keyPreview: string }>('/settings/gemini-api-key', {
+      method: 'PUT',
+      body: JSON.stringify({ apiKey }),
+    }),
+  clearGeminiApiKey: () =>
+    request<{ message: string }>('/settings/gemini-api-key', {
+      method: 'DELETE',
+    }),
+};

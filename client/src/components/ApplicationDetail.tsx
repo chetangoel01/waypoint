@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApplication, useUpdateApplication } from '../hooks';
 import { Icons } from './Icons';
+import { GenerateModal } from './GenerateModal';
 import styles from '../App.module.css';
 import type { ApplicationStatus } from '../types';
 
@@ -44,6 +46,10 @@ export function ApplicationDetail() {
   
   const { data: app, isLoading, error } = useApplication(applicationId);
   const updateApplication = useUpdateApplication();
+
+  // Modal state
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateMode, setGenerateMode] = useState<'cover-letter' | 'custom-response'>('cover-letter');
 
   if (isLoading) {
     return (
@@ -93,6 +99,19 @@ export function ApplicationDetail() {
     }
   };
 
+  const handleOpenCoverLetter = () => {
+    setGenerateMode('cover-letter');
+    setShowGenerateModal(true);
+  };
+
+  const handleSaveGenerated = (content: string) => {
+    // For now, save to notes. Later this could create a document.
+    const updatedNotes = app.notes 
+      ? `${app.notes}\n\n--- Generated ${generateMode === 'cover-letter' ? 'Cover Letter' : 'Response'} ---\n${content}`
+      : `--- Generated ${generateMode === 'cover-letter' ? 'Cover Letter' : 'Response'} ---\n${content}`;
+    updateApplication.mutate({ id: app.id, data: { notes: updatedNotes } });
+  };
+
   return (
     <div className={styles.mainInner}>
       <div className={styles.detailView}>
@@ -118,7 +137,11 @@ export function ApplicationDetail() {
             </div>
           </div>
           <div className={styles.detailActions}>
-            <button className={`${styles.button} ${styles.buttonPrimary}`}>
+            <button 
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              onClick={handleOpenCoverLetter}
+            >
+              <Icons.Lightbulb />
               Generate Cover Letter
             </button>
           </div>
@@ -219,6 +242,17 @@ export function ApplicationDetail() {
           </div>
         </div>
       </div>
+
+      {/* Generate Modal */}
+      <GenerateModal
+        isOpen={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        applicationId={applicationId}
+        companyName={app.company}
+        roleName={app.role}
+        mode={generateMode}
+        onSave={handleSaveGenerated}
+      />
     </div>
   );
 }

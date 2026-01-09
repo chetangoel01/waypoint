@@ -16,3 +16,15 @@ export {
   useUpdateProfile,
   profileKeys,
 } from './useProfile';
+
+// AI hooks
+export {
+  useAiStatus,
+  useGenerateCoverLetter,
+  useGenerateCustomResponse,
+  useRefineContent,
+  useSaveApiKey,
+  useClearApiKey,
+  aiKeys,
+  settingsKeys,
+} from './useAi';
