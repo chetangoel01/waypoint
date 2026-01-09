@@ -19,6 +19,7 @@ export interface GenerateCoverLetterInput {
 export interface GenerateCustomResponseInput {
   applicationId: number;
   question: string;
+  additionalContext?: string;
   maxLength?: number;
 }
 
@@ -247,7 +248,7 @@ ${jobContext}
 
 ${applicantContext}
 
-Write the response now. Do not include any explanations or meta-commentary, just the response text itself.`;
+${input.additionalContext ? `**Additional context from the applicant:**\n${input.additionalContext}\n\n` : ''}Write the response now. Do not include any explanations or meta-commentary, just the response text itself.`;
 
   const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 

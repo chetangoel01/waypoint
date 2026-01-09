@@ -42,12 +42,14 @@ export function useGenerateCustomResponse() {
     mutationFn: ({ 
       applicationId, 
       question, 
+      additionalContext,
       maxLength 
     }: { 
       applicationId: number; 
       question: string; 
+      additionalContext?: string;
       maxLength?: number;
-    }) => generateApi.customResponse(applicationId, question, maxLength),
+    }) => generateApi.customResponse(applicationId, question, { additionalContext, maxLength }),
   });
 }
 

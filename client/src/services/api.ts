@@ -236,10 +236,10 @@ export const generateApi = {
       method: 'POST',
       body: JSON.stringify({ applicationId, ...options }),
     }),
-  customResponse: (applicationId: number, question: string, maxLength?: number) =>
+  customResponse: (applicationId: number, question: string, options?: { additionalContext?: string; maxLength?: number }) =>
     request<GenerationResult>('/generate/custom-response', {
       method: 'POST',
-      body: JSON.stringify({ applicationId, question, maxLength }),
+      body: JSON.stringify({ applicationId, question, ...options }),
     }),
   refine: (content: string, instruction: string) =>
     request<GenerationResult>('/generate/refine', {

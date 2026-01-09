@@ -57,6 +57,7 @@ export function GenerateModal({
         result = await generateCustomResponse.mutateAsync({
           applicationId,
           question: question.trim(),
+          additionalContext: additionalContext || undefined,
         });
       }
       setGeneratedContent(result.content);
@@ -182,16 +183,28 @@ export function GenerateModal({
                 </div>
               </>
             ) : (
-              <div className={styles.field}>
-                <label className={styles.label}>Question</label>
-                <textarea
-                  className={styles.textarea}
-                  placeholder="Enter the application question..."
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={3}
-                />
-              </div>
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label}>Question</label>
+                  <textarea
+                    className={styles.textarea}
+                    placeholder="Enter the application question..."
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Additional Context (optional)</label>
+                  <textarea
+                    className={styles.textarea}
+                    placeholder="Any specific experiences, projects, or points you want to include in your answer..."
+                    value={additionalContext}
+                    onChange={(e) => setAdditionalContext(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </>
             )}
 
             <div className={styles.info}>
