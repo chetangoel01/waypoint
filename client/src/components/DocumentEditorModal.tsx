@@ -128,18 +128,6 @@ export function DocumentEditorModal({
           }}>
             <span>
               Version {latestVersion?.version ?? 1} of {versionCount}
-              {latestVersion?.is_ai_generated && (
-                <span style={{
-                  marginLeft: 'var(--space-2)',
-                  padding: '2px 6px',
-                  background: 'var(--color-terracotta-light)',
-                  color: 'var(--color-terracotta-dark)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: 'var(--text-xs)',
-                }}>
-                  AI Generated
-                </span>
-              )}
             </span>
             <button
               onClick={onViewHistory}

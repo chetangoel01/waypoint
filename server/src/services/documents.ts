@@ -58,8 +58,8 @@ function parseVersion(row: DocumentVersionRow): DocumentVersion {
   };
 }
 
-// Get all documents
-export function getAll(applicationId?: number): Document[] {
+// Get all documents with latest version
+export function getAll(applicationId?: number): (Document & { versions: DocumentVersion[] })[] {
   let sql = 'SELECT * FROM documents';
   const values: number[] = [];
 
@@ -70,7 +70,17 @@ export function getAll(applicationId?: number): Document[] {
   sql += ' ORDER BY created_at DESC';
 
   const rows = db.prepare(sql).all(...values) as DocumentRow[];
-  return rows.map(parseDocument);
+  return rows.map(row => {
+    const doc = parseDocument(row);
+    // Get only the latest version for each document
+    const latestVersion = db.prepare(
+      'SELECT * FROM document_versions WHERE document_id = ? ORDER BY version DESC LIMIT 1'
+    ).get(row.id) as DocumentVersionRow | undefined;
+    return {
+      ...doc,
+      versions: latestVersion ? [parseVersion(latestVersion)] : [],
+    };
+  });
 }
 
 // Get single document by ID

@@ -94,6 +94,10 @@ export function computeApplicationStats(applications: Application[]) {
     awaitingResponse: 0,
     offers: 0,
     rejected: 0,
+    saved: 0,
+    applied: 0,
+    phoneScreen: 0,
+    withdrawn: 0,
   };
 
   applications.forEach((app) => {
@@ -109,12 +113,22 @@ export function computeApplicationStats(applications: Application[]) {
     }
     if (app.status === 'applied') {
       stats.awaitingResponse++;
+      stats.applied++;
     }
     if (app.status === 'offer') {
       stats.offers++;
     }
     if (app.status === 'rejected') {
       stats.rejected++;
+    }
+    if (app.status === 'saved') {
+      stats.saved++;
+    }
+    if (app.status === 'phone_screen') {
+      stats.phoneScreen++;
+    }
+    if (app.status === 'withdrawn') {
+      stats.withdrawn++;
     }
   });
 

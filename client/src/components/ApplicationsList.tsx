@@ -34,6 +34,20 @@ export function ApplicationsList() {
   const [newApp, setNewApp] = useState({ company: '', role: '', url: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; company: string } | null>(null);
 
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  const statusOptions = [
+    { key: 'saved', label: 'Saved' },
+    { key: 'applied', label: 'Applied' },
+    { key: 'phone_screen', label: 'Phone Screen' },
+    { key: 'interview', label: 'Interview' },
+    { key: 'offer', label: 'Offer' },
+    { key: 'rejected', label: 'Rejected' },
+    { key: 'withdrawn', label: 'Withdrawn' },
+  ];
+
   const handleDeleteApplication = async () => {
     if (!deleteConfirm) return;
     try {
@@ -94,9 +108,23 @@ export function ApplicationsList() {
     );
   }
 
-  const sortedApplications = [...(applications ?? [])].sort(
-    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  );
+  // Filter and sort applications
+  const filteredApplications = [...(applications ?? [])]
+    .filter((app) => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesCompany = app.company.toLowerCase().includes(query);
+        const matchesRole = app.role.toLowerCase().includes(query);
+        if (!matchesCompany && !matchesRole) return false;
+      }
+      // Status filter
+      if (statusFilter && app.status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+  const hasActiveFilters = searchQuery || statusFilter;
 
   const handleCreateApplication = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,9 +170,77 @@ export function ApplicationsList() {
           </button>
         </header>
 
-        {sortedApplications.length > 0 ? (
+        {/* Filters */}
+        {(applications?.length ?? 0) > 0 && (
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            {/* Search */}
+            <div style={{ position: 'relative', marginBottom: 'var(--space-4)' }}>
+              <span style={{
+                position: 'absolute',
+                left: 'var(--space-3)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--color-ink-muted)',
+                pointerEvents: 'none',
+                width: 16,
+                height: 16,
+              }}>
+                <Icons.Search />
+              </span>
+              <input
+                type="text"
+                placeholder="Search by company or role..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  paddingLeft: 'var(--space-10)',
+                }}
+              />
+            </div>
+
+            {/* Status Filter Pills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              <button
+                onClick={() => setStatusFilter(null)}
+                style={{
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: '9999px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: statusFilter === null ? 600 : 400,
+                  backgroundColor: statusFilter === null ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                  color: statusFilter === null ? 'white' : 'var(--color-ink-muted)',
+                  border: '1px solid transparent',
+                  transition: 'all var(--duration-fast) var(--ease-out)',
+                }}
+              >
+                All
+              </button>
+              {statusOptions.map((status) => (
+                <button
+                  key={status.key}
+                  onClick={() => setStatusFilter(statusFilter === status.key ? null : status.key)}
+                  style={{
+                    padding: 'var(--space-1) var(--space-3)',
+                    borderRadius: '9999px',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: statusFilter === status.key ? 600 : 400,
+                    backgroundColor: statusFilter === status.key ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                    color: statusFilter === status.key ? 'white' : 'var(--color-ink-muted)',
+                    border: '1px solid transparent',
+                    transition: 'all var(--duration-fast) var(--ease-out)',
+                  }}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filteredApplications.length > 0 ? (
           <div className={styles.applicationsList}>
-            {sortedApplications.map((app) => (
+            {filteredApplications.map((app) => (
               <div
                 key={app.id}
                 className={styles.applicationCard}
@@ -183,6 +279,23 @@ export function ApplicationsList() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : hasActiveFilters ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <Icons.Search />
+            </div>
+            <h3 className={styles.emptyStateTitle}>No matching applications</h3>
+            <p className={styles.emptyStateText}>
+              Try adjusting your search or filters
+            </p>
+            <button
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={() => { setSearchQuery(''); setStatusFilter(null); }}
+              style={{ marginTop: 'var(--space-4)' }}
+            >
+              Clear Filters
+            </button>
           </div>
         ) : (
           <div className={styles.emptyState}>

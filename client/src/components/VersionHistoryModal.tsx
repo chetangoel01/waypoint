@@ -83,17 +83,6 @@ export function VersionHistoryModal({
                   }}>
                     Version {version.version}
                   </span>
-                  {version.is_ai_generated && (
-                    <span style={{
-                      padding: '2px 6px',
-                      background: 'var(--color-terracotta-light)',
-                      color: 'var(--color-terracotta-dark)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 'var(--text-xs)',
-                    }}>
-                      AI
-                    </span>
-                  )}
                   <span style={{
                     fontSize: 'var(--text-xs)',
                     color: 'var(--color-ink-muted)',

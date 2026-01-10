@@ -83,10 +83,12 @@ export const profileApi = {
     }),
 };
 
-// Documents endpoints
+// Documents endpoints (with latest version included)
 export const documentsApi = {
   list: (applicationId?: number) =>
-    request<Document[]>(`/documents${applicationId ? `?applicationId=${applicationId}` : ''}`),
+    request<(Document & { versions: { id: number; document_id: number; version: number; content: string; prompt_used: string | null; is_ai_generated: boolean; created_at: string }[] })[]>(
+      `/documents${applicationId ? `?application_id=${applicationId}` : ''}`
+    ),
   get: (id: number) => request<Document & { versions: DocumentVersion[] }>(`/documents/${id}`),
   create: (data: Omit<Document, 'id' | 'created_at' | 'updated_at'>) =>
     request<Document>('/documents', {

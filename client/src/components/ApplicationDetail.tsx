@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApplication, useUpdateApplication } from '../hooks';
+import { useApplication, useUpdateApplication, useDocuments } from '../hooks';
 import { Icons } from './Icons';
 import { GenerateModal } from './GenerateModal';
+import { DocumentEditorModal } from './DocumentEditorModal';
+import { VersionHistoryModal } from './VersionHistoryModal';
 import { Modal, ModalActions } from './Modal';
 import styles from '../App.module.css';
-import type { Contact, ApplicationStatusOption } from '../types';
+import type { Contact, ApplicationStatusOption, Document } from '../types';
 
 // Default statuses for new applications
 const defaultStatuses: ApplicationStatusOption[] = [
@@ -50,8 +52,9 @@ export function ApplicationDetail() {
   const applicationId = id ? parseInt(id, 10) : 0;
   
   const { data: app, isLoading, error } = useApplication(applicationId);
+  const { data: documents } = useDocuments(applicationId);
   const updateApplication = useUpdateApplication();
-  
+
   // Use app's custom statuses if available, otherwise use defaults
   const statuses = app?.custom_statuses || defaultStatuses;
 
@@ -73,6 +76,11 @@ export function ApplicationDetail() {
   const [showStatusEditor, setShowStatusEditor] = useState(false);
   const [editingStatuses, setEditingStatuses] = useState<ApplicationStatusOption[]>([]);
   const [newStatus, setNewStatus] = useState({ label: '', color: 'gray' as ApplicationStatusOption['color'] });
+
+  // Document modal state
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showDocEditor, setShowDocEditor] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   if (isLoading) {
     return (
@@ -206,10 +214,45 @@ export function ApplicationDetail() {
   };
 
   const handleUpdateStatusOption = (key: string, field: 'label' | 'color', value: string) => {
-    setEditingStatuses(editingStatuses.map(s => 
+    setEditingStatuses(editingStatuses.map(s =>
       s.key === key ? { ...s, [field]: value } : s
     ));
   };
+
+  // Document handlers
+  const handleOpenDocument = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowDocEditor(true);
+  };
+
+  const handleCloseDocEditor = () => {
+    setShowDocEditor(false);
+    setSelectedDocument(null);
+  };
+
+  const handleViewDocHistory = () => {
+    setShowDocEditor(false);
+    setShowVersionHistory(true);
+  };
+
+  const handleCloseVersionHistory = () => {
+    setShowVersionHistory(false);
+    setShowDocEditor(true);
+  };
+
+  // Helper to truncate content for preview
+  const truncateContent = (content: string, maxLength = 100) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength).trim() + '...';
+  };
+
+  // Sort documents by updated_at descending and split by type
+  const sortedDocuments = documents?.slice().sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  ) ?? [];
+
+  const questionDocuments = sortedDocuments.filter(doc => doc.type === 'custom_question');
+  const coverLetterDocuments = sortedDocuments.filter(doc => doc.type === 'cover_letter');
 
   return (
     <div className={styles.mainInner}>
@@ -436,9 +479,46 @@ export function ApplicationDetail() {
             {/* Custom Questions Section */}
             <section className={styles.detailSection}>
               <h2 className={styles.detailSectionTitle}>Application Questions</h2>
-              <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
-                Generate AI-powered responses to application questions
-              </p>
+              {questionDocuments.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                  {questionDocuments.map((doc) => (
+                    <div
+                      key={doc.id}
+                      onClick={() => handleOpenDocument(doc)}
+                      style={{
+                        padding: 'var(--space-3)',
+                        background: 'var(--color-bg-subtle)',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        transition: 'background var(--duration-fast) var(--ease-out)',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-bg-subtle)'}
+                    >
+                      <div style={{
+                        fontWeight: 600,
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--color-ink)',
+                        marginBottom: 'var(--space-1)',
+                      }}>
+                        {doc.question ? truncateContent(doc.question, 80) : 'Question'}
+                      </div>
+                      <p style={{
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--color-ink-muted)',
+                        margin: 0,
+                        lineHeight: 1.5,
+                      }}>
+                        {truncateContent(doc.versions?.[0]?.content || '', 100)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+                  Generate AI-powered responses to application questions
+                </p>
+              )}
               <button
                 className={styles.addQuestionButton}
                 onClick={() => handleOpenCustomResponse()}
@@ -550,6 +630,76 @@ export function ApplicationDetail() {
             </section>
           </div>
         </div>
+
+        {/* Cover Letters Section */}
+        {coverLetterDocuments.length > 0 && (
+          <section className={styles.detailSection} style={{ marginTop: 'var(--space-8)' }}>
+            <h2 className={styles.detailSectionTitle}>Cover Letters</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {coverLetterDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => handleOpenDocument(doc)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 'var(--space-3)',
+                    padding: 'var(--space-4)',
+                    background: 'var(--color-bg-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer',
+                    transition: 'background var(--duration-fast) var(--ease-out)',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-bg-subtle)'}
+                >
+                  <div style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--color-terracotta-light)',
+                    color: 'var(--color-terracotta-dark)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icons.FileText />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: 600,
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-ink)',
+                      marginBottom: 'var(--space-1)',
+                    }}>
+                      Cover Letter
+                    </div>
+                    <p style={{
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--color-ink-muted)',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}>
+                      {truncateContent(doc.versions?.[0]?.content || '', 120)}
+                    </p>
+                    <span style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--color-ink-muted)',
+                      marginTop: 'var(--space-2)',
+                      display: 'block',
+                    }}>
+                      Updated {formatDate(doc.updated_at)}
+                    </span>
+                  </div>
+                  <span className={styles.buttonIcon} style={{ color: 'var(--color-ink-muted)', opacity: 0.5 }}>
+                    <Icons.ChevronRight />
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Generate Modal */}
@@ -725,6 +875,27 @@ export function ApplicationDetail() {
           </button>
         </ModalActions>
       </Modal>
+
+      {/* Document Editor Modal */}
+      {selectedDocument && (
+        <DocumentEditorModal
+          isOpen={showDocEditor}
+          onClose={handleCloseDocEditor}
+          documentId={selectedDocument.id}
+          applicationName={`${app.company} - ${app.role}`}
+          onViewHistory={handleViewDocHistory}
+        />
+      )}
+
+      {/* Version History Modal */}
+      {selectedDocument && (
+        <VersionHistoryModal
+          isOpen={showVersionHistory}
+          onClose={handleCloseVersionHistory}
+          documentId={selectedDocument.id}
+          onRestoreVersion={() => {}}
+        />
+      )}
     </div>
   );
 }

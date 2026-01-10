@@ -4,8 +4,9 @@ import { Icons } from './Icons';
 import { Modal, ModalActions } from './Modal';
 import { DocumentEditorModal } from './DocumentEditorModal';
 import { VersionHistoryModal } from './VersionHistoryModal';
+import { GenerateModal } from './GenerateModal';
 import styles from '../App.module.css';
-import type { Document } from '../types';
+import type { Document, Application } from '../types';
 
 export function Documents() {
   const { data: documents, isLoading, error } = useDocuments();
@@ -18,12 +19,42 @@ export function Documents() {
   const [showEditor, setShowEditor] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<Document | null>(null);
-  const [showComingSoon, setShowComingSoon] = useState(false);
+
+  // Generate new document state
+  const [showAppSelector, setShowAppSelector] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateMode, setGenerateMode] = useState<'cover-letter' | 'custom-response'>('cover-letter');
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'cover_letter' | 'custom_question'>('all');
+  const [appFilter, setAppFilter] = useState<number | null>(null);
 
   const handleGenerateNew = () => {
-    // For now, show coming soon message
-    // In the future, this could open a standalone document generation modal
-    setShowComingSoon(true);
+    if (!aiStatus?.configured) {
+      // Show settings prompt
+      setShowAppSelector(true);
+      return;
+    }
+    if (!applications || applications.length === 0) {
+      // No applications available
+      setShowAppSelector(true);
+      return;
+    }
+    setShowAppSelector(true);
+  };
+
+  const handleSelectAppAndGenerate = (app: Application, mode: 'cover-letter' | 'custom-response') => {
+    setSelectedApp(app);
+    setGenerateMode(mode);
+    setShowAppSelector(false);
+    setShowGenerateModal(true);
+  };
+
+  const handleCloseGenerateModal = () => {
+    setShowGenerateModal(false);
+    setSelectedApp(null);
   };
 
   // Get application name for a document
@@ -96,9 +127,30 @@ export function Documents() {
     }
   };
 
-  // Sort documents by updated_at descending
-  const sortedDocuments = documents?.slice().sort(
-    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  // Filter and sort documents
+  const filteredDocuments = (documents ?? [])
+    .filter((doc) => {
+      // Search filter - search in question and content
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesQuestion = doc.question?.toLowerCase().includes(query);
+        const matchesContent = doc.versions?.[0]?.content?.toLowerCase().includes(query);
+        const matchesApp = getApplicationName(doc.application_id)?.toLowerCase().includes(query);
+        if (!matchesQuestion && !matchesContent && !matchesApp) return false;
+      }
+      // Type filter
+      if (typeFilter !== 'all' && doc.type !== typeFilter) return false;
+      // Application filter
+      if (appFilter !== null && doc.application_id !== appFilter) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+  const hasActiveFilters = searchQuery || typeFilter !== 'all' || appFilter !== null;
+
+  // Get unique applications that have documents
+  const appsWithDocuments = applications?.filter(app =>
+    documents?.some(doc => doc.application_id === app.id)
   ) ?? [];
 
   if (isLoading) {
@@ -147,7 +199,7 @@ export function Documents() {
           <div className={styles.pageHeaderInfo}>
             <h1 className={styles.pageTitle}>Documents</h1>
             <p className={styles.pageSubtitle}>
-              {sortedDocuments.length} document{sortedDocuments.length !== 1 ? 's' : ''} saved
+              {documents?.length ?? 0} document{(documents?.length ?? 0) !== 1 ? 's' : ''} saved
             </p>
           </div>
           <button
@@ -159,49 +211,114 @@ export function Documents() {
           </button>
         </header>
 
-        {/* Coming Soon Notice */}
-        {showComingSoon && (
-          <div
-            className={styles.profileSection}
-            style={{
-              backgroundColor: 'var(--color-terracotta-light)',
-              borderColor: 'var(--color-terracotta)',
-              marginBottom: 'var(--space-6)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-              <span className={styles.buttonIcon} style={{ color: 'var(--color-terracotta)', marginTop: 2 }}>
-                <Icons.Lightbulb />
+        {/* Filters */}
+        {(documents?.length ?? 0) > 0 && (
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            {/* Search */}
+            <div style={{ position: 'relative', marginBottom: 'var(--space-4)' }}>
+              <span style={{
+                position: 'absolute',
+                left: 'var(--space-3)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--color-ink-muted)',
+                pointerEvents: 'none',
+                width: 16,
+                height: 16,
+              }}>
+                <Icons.Search />
               </span>
-              <div>
-                <p style={{ fontWeight: 600, color: 'var(--color-terracotta-dark)', marginBottom: 'var(--space-1)' }}>
-                  {aiStatus?.configured ? 'Coming Soon' : 'Setup Required'}
-                </p>
-                <p className={styles.formHint}>
-                  {aiStatus?.configured
-                    ? 'Standalone document generation is coming soon. For now, you can generate cover letters and responses from each application\'s detail page.'
-                    : 'To generate content with AI, please add your OpenAI API key in Settings first.'}
-                </p>
-                <button
-                  onClick={() => setShowComingSoon(false)}
-                  style={{
-                    marginTop: 'var(--space-2)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-terracotta)',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: '2px',
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
+              <input
+                type="text"
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  paddingLeft: 'var(--space-10)',
+                }}
+              />
+            </div>
+
+            {/* Type and App Filters */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', alignItems: 'center' }}>
+              {/* Type Filter */}
+              <button
+                onClick={() => setTypeFilter('all')}
+                style={{
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: '9999px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: typeFilter === 'all' ? 600 : 400,
+                  backgroundColor: typeFilter === 'all' ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                  color: typeFilter === 'all' ? 'white' : 'var(--color-ink-muted)',
+                  border: '1px solid transparent',
+                }}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setTypeFilter(typeFilter === 'cover_letter' ? 'all' : 'cover_letter')}
+                style={{
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: '9999px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: typeFilter === 'cover_letter' ? 600 : 400,
+                  backgroundColor: typeFilter === 'cover_letter' ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                  color: typeFilter === 'cover_letter' ? 'white' : 'var(--color-ink-muted)',
+                  border: '1px solid transparent',
+                }}
+              >
+                Cover Letters
+              </button>
+              <button
+                onClick={() => setTypeFilter(typeFilter === 'custom_question' ? 'all' : 'custom_question')}
+                style={{
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: '9999px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: typeFilter === 'custom_question' ? 600 : 400,
+                  backgroundColor: typeFilter === 'custom_question' ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                  color: typeFilter === 'custom_question' ? 'white' : 'var(--color-ink-muted)',
+                  border: '1px solid transparent',
+                }}
+              >
+                Responses
+              </button>
+
+              {/* Application Filter - only show if there are apps with documents */}
+              {appsWithDocuments.length > 0 && (
+                <>
+                  <span style={{ color: 'var(--color-ink-muted)', margin: '0 var(--space-2)' }}>|</span>
+                  <select
+                    value={appFilter ?? ''}
+                    onChange={(e) => setAppFilter(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    style={{
+                      padding: 'var(--space-1) var(--space-3)',
+                      borderRadius: '9999px',
+                      fontSize: 'var(--text-sm)',
+                      backgroundColor: appFilter ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                      color: appFilter ? 'white' : 'var(--color-ink-muted)',
+                      border: '1px solid transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">All Applications</option>
+                    {appsWithDocuments.map((app) => (
+                      <option key={app.id} value={app.id}>
+                        {app.company} - {app.role}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {sortedDocuments.length > 0 ? (
+        {filteredDocuments.length > 0 ? (
           <div className={styles.applicationsList}>
-            {sortedDocuments.map((doc) => {
+            {filteredDocuments.map((doc) => {
               const appName = getApplicationName(doc.application_id);
               const typeBadgeStyle = doc.type === 'cover_letter'
                 ? { backgroundColor: 'var(--color-terracotta-light)', color: 'var(--color-terracotta-dark)' }
@@ -214,7 +331,16 @@ export function Documents() {
                   onClick={() => handleOpenEditor(doc)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className={styles.applicationLogo}>
+                  <div
+                    className={styles.applicationLogo}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      fontSize: 'var(--text-sm)',
+                      backgroundColor: doc.type === 'cover_letter' ? 'var(--color-terracotta-light)' : 'var(--color-sky-light)',
+                      color: doc.type === 'cover_letter' ? 'var(--color-terracotta-dark)' : 'var(--color-sky)',
+                    }}
+                  >
                     {doc.type === 'cover_letter' ? (
                       <Icons.FileText />
                     ) : (
@@ -268,6 +394,23 @@ export function Documents() {
                 </div>
               );
             })}
+          </div>
+        ) : hasActiveFilters ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <Icons.Search />
+            </div>
+            <h3 className={styles.emptyStateTitle}>No matching documents</h3>
+            <p className={styles.emptyStateText}>
+              Try adjusting your search or filters
+            </p>
+            <button
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={() => { setSearchQuery(''); setTypeFilter('all'); setAppFilter(null); }}
+              style={{ marginTop: 'var(--space-4)' }}
+            >
+              Clear Filters
+            </button>
           </div>
         ) : (
           <div className={styles.emptyState}>
@@ -332,6 +475,106 @@ export function Documents() {
           </button>
         </ModalActions>
       </Modal>
+
+      {/* Application Selector Modal */}
+      <Modal
+        isOpen={showAppSelector}
+        onClose={() => setShowAppSelector(false)}
+        title="Generate New Document"
+        size="md"
+      >
+        {!aiStatus?.configured ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <Icons.Settings />
+            </div>
+            <h3 className={styles.emptyStateTitle}>Setup Required</h3>
+            <p className={styles.emptyStateText}>
+              To generate content with AI, please add your API key in Settings first.
+            </p>
+            <a
+              href="/settings"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              style={{ marginTop: 'var(--space-4)', display: 'inline-flex' }}
+              onClick={() => setShowAppSelector(false)}
+            >
+              Go to Settings
+            </a>
+          </div>
+        ) : !applications || applications.length === 0 ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <Icons.Applications />
+            </div>
+            <h3 className={styles.emptyStateTitle}>No Applications</h3>
+            <p className={styles.emptyStateText}>
+              Create an application first to generate documents for it.
+            </p>
+            <a
+              href="/applications"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              style={{ marginTop: 'var(--space-4)', display: 'inline-flex' }}
+              onClick={() => setShowAppSelector(false)}
+            >
+              Go to Applications
+            </a>
+          </div>
+        ) : (
+          <>
+            <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+              Select an application to generate a document for:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', maxHeight: '300px', overflowY: 'auto' }}>
+              {applications.map((app) => (
+                <div
+                  key={app.id}
+                  style={{
+                    padding: 'var(--space-3)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{app.company}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>{app.role}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button
+                      className={`${styles.button} ${styles.buttonSecondary}`}
+                      style={{ padding: 'var(--space-1) var(--space-3)', fontSize: 'var(--text-xs)' }}
+                      onClick={() => handleSelectAppAndGenerate(app, 'cover-letter')}
+                    >
+                      Cover Letter
+                    </button>
+                    <button
+                      className={`${styles.button} ${styles.buttonSecondary}`}
+                      style={{ padding: 'var(--space-1) var(--space-3)', fontSize: 'var(--text-xs)' }}
+                      onClick={() => handleSelectAppAndGenerate(app, 'custom-response')}
+                    >
+                      Response
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* Generate Modal */}
+      {selectedApp && (
+        <GenerateModal
+          isOpen={showGenerateModal}
+          onClose={handleCloseGenerateModal}
+          applicationId={selectedApp.id}
+          companyName={selectedApp.company}
+          roleName={selectedApp.role}
+          mode={generateMode}
+        />
+      )}
     </div>
   );
 }
