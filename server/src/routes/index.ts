@@ -9,6 +9,7 @@ import projectsRoutes from './projects.js';
 import storiesRoutes from './stories.js';
 import generateRoutes from './generate.js';
 import settingsRoutes from './settings.js';
+import emailRoutes from './email.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/projects', projectsRoutes);
 router.use('/stories', storiesRoutes);
 router.use('/generate', generateRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/email', emailRoutes);
 
 export default router;

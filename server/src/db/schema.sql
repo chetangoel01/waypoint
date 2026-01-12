@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS profile (
   preferences TEXT,
   deal_breakers TEXT,
   additional_context TEXT,
+  resume_text TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -125,6 +126,25 @@ CREATE INDEX IF NOT EXISTS idx_documents_application_id ON documents(application
 CREATE INDEX IF NOT EXISTS idx_document_versions_document_id ON document_versions(document_id);
 CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
 CREATE INDEX IF NOT EXISTS idx_stories_tags ON stories(tags);
+
+-- Email tracking columns for applications (added via ALTER TABLE if they don't exist)
+-- These are added dynamically in the init script
+
+-- Processed emails table (for tracking which emails have been processed)
+CREATE TABLE IF NOT EXISTS processed_emails (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email_id TEXT UNIQUE NOT NULL,
+  processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_job_related INTEGER DEFAULT 0,
+  application_id INTEGER,
+  email_from TEXT,
+  email_subject TEXT,
+  email_date TEXT,
+  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_processed_emails_email_id ON processed_emails(email_id);
+CREATE INDEX IF NOT EXISTS idx_processed_emails_application_id ON processed_emails(application_id);
 
 -- Trigger to update updated_at timestamp
 CREATE TRIGGER IF NOT EXISTS update_profile_timestamp

@@ -12,6 +12,7 @@ export interface Profile {
   preferences: string | null;
   deal_breakers: string | null;
   additional_context: string | null;
+  resume_text: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -129,4 +130,64 @@ export interface DocumentVersion {
   prompt_used: string | null;
   is_ai_generated: boolean;
   created_at: string;
+}
+
+// Email integration types
+export interface EmailClassification {
+  isJobRelated: boolean;
+  confidence: number;
+  reason: string;
+}
+
+export interface ExtractedJobInfo {
+  company: string;
+  role: string;
+  status: 'saved' | 'applied' | 'rejected' | 'interview' | 'offer' | 'phone_screen';
+  url?: string;
+  contactName?: string;
+  contactEmail?: string;
+  jobDescription?: string;
+}
+
+export interface ProcessedEmail {
+  id: number;
+  email_id: string;
+  processed_at: string;
+  is_job_related: number;
+  application_id: number | null;
+  email_from: string | null;
+  email_subject: string | null;
+  email_date: string | null;
+}
+
+export interface SyncResult {
+  processedCount: number;
+  newApplications: number;
+  updatedApplications: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface EmailStatus {
+  connected: boolean;
+  email?: string;
+  lastSync?: string;
+  hasCredentials: boolean;
+}
+
+export interface GmailMessage {
+  id: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  date: string;
+  body: string;
+}
+
+export interface SyncProgress {
+  stage: 'fetching' | 'processing' | 'saving' | 'complete' | 'error';
+  message: string;
+  current: number;
+  total: number;
+  emailSubject?: string;
 }

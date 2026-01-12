@@ -20,6 +20,7 @@ export {
 // AI hooks
 export {
   useAiStatus,
+  useAiContext,
   useGenerateCoverLetter,
   useGenerateCustomResponse,
   useRefineContent,
@@ -43,3 +44,48 @@ export {
   useAddDocumentVersion,
   documentKeys,
 } from './useDocuments';
+
+// Profile data hooks (experience, education, skills, projects, stories)
+export {
+  // Experience
+  useExperiences,
+  useCreateExperience,
+  useUpdateExperience,
+  useDeleteExperience,
+  experienceKeys,
+  // Education
+  useEducation,
+  useCreateEducation,
+  useUpdateEducation,
+  useDeleteEducation,
+  educationKeys,
+  // Skills
+  useSkills,
+  useCreateSkill,
+  useUpdateSkill,
+  useDeleteSkill,
+  skillsKeys,
+  // Projects
+  useProjects,
+  useCreateProject,
+  useUpdateProject,
+  useDeleteProject,
+  projectsKeys,
+  // Stories
+  useStories,
+  useCreateStory,
+  useUpdateStory,
+  useDeleteStory,
+  storiesKeys,
+} from './useProfileData';
+
+// Email integration hooks
+export {
+  useEmailStatus,
+  useSaveEmailCredentials,
+  useGetAuthUrl,
+  useEmailSync,
+  useDisconnectEmail,
+  useEmailHistory,
+  emailKeys,
+} from './useEmail';

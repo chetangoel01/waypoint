@@ -77,6 +77,14 @@ const DEFAULT_STATUSES: StatusOption[] = [
 export const Settings = {
   OPENAI_API_KEY: 'openai_api_key',
   STATUS_OPTIONS: 'status_options',
+  // Gmail OAuth settings
+  GMAIL_CLIENT_ID: 'gmail_client_id',
+  GMAIL_CLIENT_SECRET: 'gmail_client_secret',
+  GMAIL_ACCESS_TOKEN: 'gmail_access_token',
+  GMAIL_REFRESH_TOKEN: 'gmail_refresh_token',
+  GMAIL_TOKEN_EXPIRY: 'gmail_token_expiry',
+  GMAIL_USER_EMAIL: 'gmail_user_email',
+  GMAIL_LAST_SYNC: 'gmail_last_sync',
   
   // Returns API key from env var first, then falls back to database
   getApiKey(): string | null {
@@ -121,5 +129,61 @@ export const Settings = {
 
   resetStatusOptions(): void {
     deleteSetting(Settings.STATUS_OPTIONS);
+  },
+
+  // Gmail OAuth helpers
+  getGmailCredentials(): { clientId: string; clientSecret: string } | null {
+    const clientId = getSetting(Settings.GMAIL_CLIENT_ID);
+    const clientSecret = getSetting(Settings.GMAIL_CLIENT_SECRET);
+    if (!clientId || !clientSecret) return null;
+    return { clientId, clientSecret };
+  },
+
+  setGmailCredentials(clientId: string, clientSecret: string): void {
+    setSetting(Settings.GMAIL_CLIENT_ID, clientId);
+    setSetting(Settings.GMAIL_CLIENT_SECRET, clientSecret);
+  },
+
+  getGmailTokens(): { accessToken: string; refreshToken: string; expiry: number } | null {
+    const accessToken = getSetting(Settings.GMAIL_ACCESS_TOKEN);
+    const refreshToken = getSetting(Settings.GMAIL_REFRESH_TOKEN);
+    const expiry = getSetting(Settings.GMAIL_TOKEN_EXPIRY);
+    if (!accessToken || !refreshToken) return null;
+    return { accessToken, refreshToken, expiry: expiry ? parseInt(expiry, 10) : 0 };
+  },
+
+  setGmailTokens(accessToken: string, refreshToken: string, expiry: number): void {
+    setSetting(Settings.GMAIL_ACCESS_TOKEN, accessToken);
+    setSetting(Settings.GMAIL_REFRESH_TOKEN, refreshToken);
+    setSetting(Settings.GMAIL_TOKEN_EXPIRY, expiry.toString());
+  },
+
+  getGmailUserEmail(): string | null {
+    return getSetting(Settings.GMAIL_USER_EMAIL);
+  },
+
+  setGmailUserEmail(email: string): void {
+    setSetting(Settings.GMAIL_USER_EMAIL, email);
+  },
+
+  getLastSyncDate(): string | null {
+    return getSetting(Settings.GMAIL_LAST_SYNC);
+  },
+
+  setLastSyncDate(date: string): void {
+    setSetting(Settings.GMAIL_LAST_SYNC, date);
+  },
+
+  clearGmailConnection(): void {
+    deleteSetting(Settings.GMAIL_ACCESS_TOKEN);
+    deleteSetting(Settings.GMAIL_REFRESH_TOKEN);
+    deleteSetting(Settings.GMAIL_TOKEN_EXPIRY);
+    deleteSetting(Settings.GMAIL_USER_EMAIL);
+    deleteSetting(Settings.GMAIL_LAST_SYNC);
+  },
+
+  isGmailConnected(): boolean {
+    const tokens = this.getGmailTokens();
+    return tokens !== null;
   },
 };

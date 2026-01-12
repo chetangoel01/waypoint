@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAiStatus, useSaveApiKey, useClearApiKey, useStatusOptions, useUpdateStatuses, useResetStatuses } from '../hooks';
 import { Icons } from './Icons';
+import { EmailSettings } from './EmailSettings';
 import styles from '../App.module.css';
 import type { StatusOption } from '../services/api';
 
@@ -382,6 +383,8 @@ export function Settings() {
             </>
           )}
         </section>
+
+        <EmailSettings onToast={setToast} />
 
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>Data Management</h2>
