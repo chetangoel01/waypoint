@@ -8,6 +8,9 @@ import type {
   Skill,
   Project,
   Story,
+  EmailStatus,
+  SyncResult,
+  ProcessedEmail,
 } from '../types';
 
 const API_BASE = '/api';
@@ -249,6 +252,7 @@ export const generateApi = {
       body: JSON.stringify({ content, instruction }),
     }),
   status: () => request<{ configured: boolean }>('/generate/status'),
+  context: () => request<{ context: string }>('/generate/context'),
 };
 
 // Settings types
@@ -287,4 +291,22 @@ export const settingsApi = {
     request<StatusOption[]>('/settings/statuses/reset', {
       method: 'POST',
     }),
+};
+
+// Email integration endpoints
+export const emailApi = {
+  getStatus: () => request<EmailStatus>('/email/status'),
+  saveCredentials: (clientId: string, clientSecret: string) =>
+    request<{ message: string }>('/email/credentials', {
+      method: 'PUT',
+      body: JSON.stringify({ clientId, clientSecret }),
+    }),
+  getAuthUrl: () => request<{ url: string }>('/email/auth-url'),
+  sync: () => request<SyncResult>('/email/sync', { method: 'POST' }),
+  disconnect: () =>
+    request<{ message: string }>('/email/disconnect', {
+      method: 'DELETE',
+    }),
+  getHistory: (limit?: number) =>
+    request<ProcessedEmail[]>(`/email/history${limit ? `?limit=${limit}` : ''}`),
 };

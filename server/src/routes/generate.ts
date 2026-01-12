@@ -86,4 +86,14 @@ router.get('/status', (_req: Request, res: Response) => {
   }));
 });
 
+// GET /api/generate/context - get the applicant context that would be sent to AI
+router.get('/context', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const context = await aiService.getApplicantContext();
+    res.json(success({ context }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

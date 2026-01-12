@@ -60,6 +60,12 @@ async function buildApplicantContext(): Promise<string> {
     if (profile.preferences) context += `**Preferences:** ${profile.preferences}\n`;
     if (profile.additional_context) context += `**Additional Context:** ${profile.additional_context}\n`;
     context += '\n';
+
+    // Include resume text if available
+    if (profile.resume_text) {
+      context += '### Resume Content\n';
+      context += profile.resume_text + '\n\n';
+    }
   }
 
   if (experience.length > 0) {
@@ -317,4 +323,9 @@ Write the refined content now. Do not include any explanations or meta-commentar
 // Check if AI is configured
 export function isAiConfigured(): boolean {
   return !!Settings.getApiKey();
+}
+
+// Get the applicant context (for viewing in UI)
+export async function getApplicantContext(): Promise<string> {
+  return buildApplicantContext();
 }

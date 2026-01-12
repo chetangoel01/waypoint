@@ -13,6 +13,7 @@ export interface UpdateProfileData {
   preferences?: string | null;
   deal_breakers?: string | null;
   additional_context?: string | null;
+  resume_text?: string | null;
 }
 
 // Get the single profile (id = 1)
@@ -71,6 +72,10 @@ export function updateProfile(data: UpdateProfileData): Profile {
   if (data.additional_context !== undefined) {
     fields.push('additional_context = ?');
     values.push(data.additional_context);
+  }
+  if (data.resume_text !== undefined) {
+    fields.push('resume_text = ?');
+    values.push(data.resume_text);
   }
 
   if (fields.length > 0) {

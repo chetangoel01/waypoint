@@ -5,6 +5,7 @@ import { generateApi, settingsApi, type CoverLetterTone, type StatusOption } fro
 export const aiKeys = {
   all: ['ai'] as const,
   status: () => [...aiKeys.all, 'status'] as const,
+  context: () => [...aiKeys.all, 'context'] as const,
 };
 
 export const settingsKeys = {
@@ -18,6 +19,18 @@ export function useAiStatus() {
     queryKey: settingsKeys.aiStatus(),
     queryFn: settingsApi.getAiStatus,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+// Get the AI context (the prompt/context that gets sent to the AI)
+export function useAiContext() {
+  return useQuery({
+    queryKey: aiKeys.context(),
+    queryFn: async () => {
+      const result = await generateApi.context();
+      return result.context;
+    },
+    staleTime: 1000 * 60, // 1 minute
   });
 }
 

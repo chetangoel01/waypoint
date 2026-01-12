@@ -1,13 +1,45 @@
-import { useState, useEffect } from 'react';
-import { useProfile, useUpdateProfile } from '../hooks';
+import { useState, useEffect, useRef } from 'react';
+import { useProfile, useUpdateProfile, useExperiences, useEducation, useSkills, useProjects, useStories, useAiContext } from '../hooks';
 import { Icons } from './Icons';
+import { Toast } from './Toast';
+import { Modal, ModalActions } from './Modal';
+import {
+  ExperienceSection,
+  EducationSection,
+  SkillsSection,
+  ProjectsSection,
+  StoriesSection,
+} from './ProfileSections';
+import * as pdfjs from 'pdfjs-dist';
 import styles from '../App.module.css';
+import sectionStyles from './ProfileSections.module.css';
+
+// Set up pdf.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export function Profile() {
   const { data: profile, isLoading, error } = useProfile();
   const updateProfile = useUpdateProfile();
-  const [hasResume, setHasResume] = useState(false);
-  
+
+  // Profile data for AI context display
+  const { data: experiences } = useExperiences();
+  const { data: educationList } = useEducation();
+  const { data: skillsByCategory } = useSkills();
+  const { data: projects } = useProjects();
+  const { data: stories } = useStories();
+
+  // Toast state
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Resume upload state
+  const [resumeFile, setResumeFile] = useState<{ name: string; date: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal states
+  const [showResumePreview, setShowResumePreview] = useState(false);
+  const [showAiContext, setShowAiContext] = useState(false);
+
   // Local form state
   const [formData, setFormData] = useState({
     name: '',
@@ -31,6 +63,10 @@ export function Profile() {
         github_url: profile.github_url ?? '',
         career_goals: profile.career_goals ?? '',
       });
+      // Check if resume text exists
+      if (profile.resume_text && !resumeFile) {
+        setResumeFile({ name: 'Resume', date: 'Previously uploaded' });
+      }
     }
   }, [profile]);
 
@@ -42,7 +78,59 @@ export function Profile() {
 
   const handleBlur = (field: keyof typeof formData) => () => {
     if (profile && formData[field] !== (profile[field] ?? '')) {
-      updateProfile.mutate({ [field]: formData[field] || null });
+      updateProfile.mutate(
+        { [field]: formData[field] || null },
+        {
+          onSuccess: () => setToast({ type: 'success', message: 'Saved' }),
+          onError: () => setToast({ type: 'error', message: 'Failed to save' }),
+        }
+      );
+    }
+  };
+
+  // Handle resume upload
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setToast({ type: 'error', message: 'Please upload a PDF file' });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Parse PDF using pdf.js
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item) => ('str' in item ? item.str : ''))
+          .join(' ');
+        fullText += pageText + '\n';
+      }
+
+      // Save to profile
+      await updateProfile.mutateAsync({ resume_text: fullText });
+
+      setResumeFile({
+        name: file.name,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      });
+      setToast({ type: 'success', message: 'Resume uploaded and parsed!' });
+    } catch (err) {
+      console.error('Resume parse error:', err);
+      setToast({ type: 'error', message: 'Failed to parse resume' });
+    } finally {
+      setIsUploading(false);
+      // Reset file input so same file can be re-uploaded
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -98,20 +186,51 @@ export function Profile() {
         {/* Resume Upload */}
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>Resume</h2>
-          {!hasResume ? (
-            <div className={styles.uploadArea} onClick={() => setHasResume(true)}>
-              <div className={styles.uploadIcon}><Icons.Upload /></div>
-              <p className={styles.uploadText}>Drop your resume here or click to upload</p>
-              <p className={styles.uploadHint}>PDF or DOCX, max 5MB</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleResumeUpload}
+            style={{ display: 'none' }}
+          />
+          {!resumeFile ? (
+            <div
+              className={styles.uploadArea}
+              onClick={() => fileInputRef.current?.click()}
+              style={{ cursor: isUploading ? 'wait' : 'pointer' }}
+            >
+              <div className={styles.uploadIcon}>
+                {isUploading ? <Icons.Loader /> : <Icons.Upload />}
+              </div>
+              <p className={styles.uploadText}>
+                {isUploading ? 'Parsing resume...' : 'Drop your resume here or click to upload'}
+              </p>
+              <p className={styles.uploadHint}>PDF format</p>
             </div>
           ) : (
             <div className={styles.uploadedFile}>
               <div className={styles.fileIcon}><Icons.FileText /></div>
               <div className={styles.fileInfo}>
-                <p className={styles.fileName}>resume_2026.pdf</p>
-                <p className={styles.fileDate}>Uploaded Jan 5, 2026</p>
+                <p className={styles.fileName}>{resumeFile.name}</p>
+                <p className={styles.fileDate}>{resumeFile.date}</p>
               </div>
-              <button className={`${styles.button} ${styles.buttonSecondary}`}>Replace</button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  onClick={() => setShowResumePreview(true)}
+                  title="Preview parsed resume text"
+                >
+                  <span className={styles.buttonIcon}><Icons.Eye /></span>
+                  Preview
+                </button>
+                <button
+                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Parsing...' : 'Replace'}
+                </button>
+              </div>
             </div>
           )}
         </section>
@@ -200,37 +319,383 @@ export function Profile() {
           </div>
         </section>
 
-        {/* AI Learning Insights - Placeholder for future */}
+        {/* Profile Data Sections */}
+        <ExperienceSection />
+        <EducationSection />
+        <SkillsSection />
+        <ProjectsSection />
+        <StoriesSection />
+
+        {/* AI Context - What the model knows about you */}
         <section className={styles.profileSection}>
-          <h2 className={styles.profileSectionTitle}>AI Learning Insights</h2>
-          <p className={styles.formHint} style={{ marginBottom: '1rem' }}>
-            Patterns learned from your edits to AI-generated content
-          </p>
-          <div className={styles.insightsList}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+            <div>
+              <h2 className={styles.profileSectionTitle} style={{ marginBottom: 'var(--space-1)' }}>AI Context</h2>
+              <p className={styles.formHint}>
+                Information available to the AI when generating content
+              </p>
+            </div>
+            <button
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              onClick={() => setShowAiContext(true)}
+            >
+              <span className={styles.buttonIcon}><Icons.Brain /></span>
+              View Full Context
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-3)' }}>
             <div className={styles.insightCard}>
-              <div className={styles.insightIcon}><Icons.Lightbulb /></div>
+              <div className={styles.insightIcon} style={{ color: profile?.name ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.Profile />
+              </div>
               <div className={styles.insightContent}>
-                <p className={styles.insightTitle}>Prefers concise introductions</p>
-                <p className={styles.insightText}>You often remove generic opening lines and get straight to the point.</p>
+                <p className={styles.insightTitle}>Profile</p>
+                <p className={styles.insightText}>
+                  {profile?.name ? 'Complete' : 'Not set'}
+                </p>
               </div>
             </div>
             <div className={styles.insightCard}>
-              <div className={styles.insightIcon}><Icons.Lightbulb /></div>
+              <div className={styles.insightIcon} style={{ color: profile?.resume_text ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.FileText />
+              </div>
               <div className={styles.insightContent}>
-                <p className={styles.insightTitle}>Adds specific metrics</p>
-                <p className={styles.insightText}>You frequently add quantified achievements like percentages and numbers.</p>
+                <p className={styles.insightTitle}>Resume</p>
+                <p className={styles.insightText}>
+                  {profile?.resume_text ? 'Uploaded' : 'Not uploaded'}
+                </p>
               </div>
             </div>
             <div className={styles.insightCard}>
-              <div className={styles.insightIcon}><Icons.Lightbulb /></div>
+              <div className={styles.insightIcon} style={{ color: (experiences?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.Applications />
+              </div>
               <div className={styles.insightContent}>
-                <p className={styles.insightTitle}>Technical depth preferred</p>
-                <p className={styles.insightText}>You tend to expand on technical details and specific technologies used.</p>
+                <p className={styles.insightTitle}>Experience</p>
+                <p className={styles.insightText}>
+                  {experiences?.length ?? 0} entries
+                </p>
+              </div>
+            </div>
+            <div className={styles.insightCard}>
+              <div className={styles.insightIcon} style={{ color: (educationList?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.FileText />
+              </div>
+              <div className={styles.insightContent}>
+                <p className={styles.insightTitle}>Education</p>
+                <p className={styles.insightText}>
+                  {educationList?.length ?? 0} entries
+                </p>
+              </div>
+            </div>
+            <div className={styles.insightCard}>
+              <div className={styles.insightIcon} style={{ color: skillsByCategory && Object.keys(skillsByCategory).length > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.Check />
+              </div>
+              <div className={styles.insightContent}>
+                <p className={styles.insightTitle}>Skills</p>
+                <p className={styles.insightText}>
+                  {skillsByCategory ? Object.values(skillsByCategory).flat().length : 0} skills
+                </p>
+              </div>
+            </div>
+            <div className={styles.insightCard}>
+              <div className={styles.insightIcon} style={{ color: (projects?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.Lightbulb />
+              </div>
+              <div className={styles.insightContent}>
+                <p className={styles.insightTitle}>Projects</p>
+                <p className={styles.insightText}>
+                  {projects?.length ?? 0} projects
+                </p>
+              </div>
+            </div>
+            <div className={styles.insightCard}>
+              <div className={styles.insightIcon} style={{ color: (stories?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+                <Icons.FileText />
+              </div>
+              <div className={styles.insightContent}>
+                <p className={styles.insightTitle}>Stories</p>
+                <p className={styles.insightText}>
+                  {stories?.length ?? 0} stories
+                </p>
               </div>
             </div>
           </div>
         </section>
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onDismiss={() => setToast(null)}
+        />
+      )}
+
+      {/* Resume Preview Modal */}
+      <Modal
+        isOpen={showResumePreview}
+        onClose={() => setShowResumePreview(false)}
+        title="Resume Content"
+        size="lg"
+      >
+        <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+          {profile?.resume_text ? (
+            <pre style={{
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: 'var(--text-sm)',
+              lineHeight: 1.6,
+              padding: 'var(--space-4)',
+              backgroundColor: 'var(--color-bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              margin: 0,
+            }}>
+              {profile.resume_text}
+            </pre>
+          ) : (
+            <p className={styles.formHint}>No resume content available.</p>
+          )}
+        </div>
+      </Modal>
+
+      {/* AI Context Modal */}
+      <AiContextModal
+        isOpen={showAiContext}
+        onClose={() => setShowAiContext(false)}
+        profile={profile}
+        experiences={experiences}
+        educationList={educationList}
+        skillsByCategory={skillsByCategory}
+        projects={projects}
+        stories={stories}
+      />
     </div>
+  );
+}
+
+// Separate component for AI Context Modal
+interface AiContextModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  profile: any;
+  experiences: any;
+  educationList: any;
+  skillsByCategory: any;
+  projects: any;
+  stories: any;
+}
+
+function AiContextModal({
+  isOpen,
+  onClose,
+  profile,
+  experiences,
+  educationList,
+  skillsByCategory,
+  projects,
+  stories,
+}: AiContextModalProps) {
+  const [showRawPrompt, setShowRawPrompt] = useState(false);
+  const { data: aiContext, isLoading: isLoadingContext } = useAiContext();
+
+  const skillCount = skillsByCategory ? Object.values(skillsByCategory).flat().length : 0;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="AI Context" size="xl">
+      <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+        This is the information the AI uses when generating cover letters and responses.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {/* Summary Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-3)' }}>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: profile?.name ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.Profile />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Profile</p>
+              <p className={styles.insightText}>{profile?.name ? 'Complete' : 'Not set'}</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: profile?.resume_text ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.FileText />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Resume</p>
+              <p className={styles.insightText}>{profile?.resume_text ? `${Math.round(profile.resume_text.length / 1000)}k chars` : 'None'}</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: (experiences?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.Applications />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Experience</p>
+              <p className={styles.insightText}>{experiences?.length ?? 0} entries</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: (educationList?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.FileText />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Education</p>
+              <p className={styles.insightText}>{educationList?.length ?? 0} entries</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: skillCount > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.Check />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Skills</p>
+              <p className={styles.insightText}>{skillCount} skills</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: (projects?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.Lightbulb />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Projects</p>
+              <p className={styles.insightText}>{projects?.length ?? 0} projects</p>
+            </div>
+          </div>
+          <div className={styles.insightCard}>
+            <div className={styles.insightIcon} style={{ color: (stories?.length ?? 0) > 0 ? 'var(--color-sage)' : 'var(--color-ink-muted)' }}>
+              <Icons.FileText />
+            </div>
+            <div className={styles.insightContent}>
+              <p className={styles.insightTitle}>Stories</p>
+              <p className={styles.insightText}>{stories?.length ?? 0} stories</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Breakdown */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+            Data Summary
+          </h3>
+
+          {/* Profile Info */}
+          {profile?.name && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>Profile</p>
+              <p className={sectionStyles.previewValue}>
+                {profile.name}
+                {profile.location && ` - ${profile.location}`}
+                {profile.email && ` (${profile.email})`}
+              </p>
+              {profile.career_goals && (
+                <p className={sectionStyles.previewValue} style={{ marginTop: 'var(--space-1)', color: 'var(--color-ink-muted)' }}>
+                  Goals: {profile.career_goals.slice(0, 150)}{profile.career_goals.length > 150 ? '...' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Experience */}
+          {experiences && experiences.length > 0 && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>Work Experience</p>
+              <ul className={sectionStyles.previewList}>
+                {experiences.slice(0, 3).map((exp: any) => (
+                  <li key={exp.id}>{exp.role} at {exp.company}</li>
+                ))}
+                {experiences.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{experiences.length - 3} more</li>}
+              </ul>
+            </div>
+          )}
+
+          {/* Education */}
+          {educationList && educationList.length > 0 && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>Education</p>
+              <ul className={sectionStyles.previewList}>
+                {educationList.map((edu: any) => (
+                  <li key={edu.id}>{edu.degree} from {edu.institution}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Skills */}
+          {skillsByCategory && Object.keys(skillsByCategory).length > 0 && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>Skills</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                {Object.entries(skillsByCategory).map(([category, skills]: [string, any]) => (
+                  <span key={category} className={sectionStyles.entryTag}>
+                    {category}: {skills.length}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Projects */}
+          {projects && projects.length > 0 && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>Projects</p>
+              <ul className={sectionStyles.previewList}>
+                {projects.slice(0, 3).map((proj: any) => (
+                  <li key={proj.id}>{proj.name}</li>
+                ))}
+                {projects.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{projects.length - 3} more</li>}
+              </ul>
+            </div>
+          )}
+
+          {/* Stories */}
+          {stories && stories.length > 0 && (
+            <div className={sectionStyles.previewSection}>
+              <p className={sectionStyles.previewLabel}>STAR Stories</p>
+              <ul className={sectionStyles.previewList}>
+                {stories.slice(0, 3).map((story: any) => (
+                  <li key={story.id}>{story.title}</li>
+                ))}
+                {stories.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{stories.length - 3} more</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Raw Prompt Toggle */}
+        <div className={sectionStyles.rawPromptContainer}>
+          <button
+            className={sectionStyles.rawPromptToggle}
+            onClick={() => setShowRawPrompt(!showRawPrompt)}
+          >
+            <Icons.FileText />
+            {showRawPrompt ? 'Hide Raw Prompt' : 'View Raw Prompt (what the AI sees)'}
+          </button>
+
+          {showRawPrompt && (
+            <div className={sectionStyles.rawPrompt}>
+              {isLoadingContext ? (
+                'Loading context...'
+              ) : aiContext ? (
+                aiContext
+              ) : (
+                'No context available. Add profile data to see what the AI will use.'
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ModalActions>
+        <button className={`${styles.button} ${styles.buttonSecondary}`} onClick={onClose}>
+          Close
+        </button>
+      </ModalActions>
+    </Modal>
   );
 }
