@@ -1,4 +1,4 @@
-import supabase from '../db/index.js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Document, DocumentVersion, DocumentType } from '../types/index.js';
 import { validationError, notFound } from '../middleware/response.js';
 
@@ -26,6 +26,7 @@ const VALID_TYPES: DocumentType[] = ['cover_letter', 'custom_question'];
 
 // Get all documents with latest version
 export async function getAll(
+  supabase: SupabaseClient,
   applicationId?: number
 ): Promise<(Document & { versions: DocumentVersion[] })[]> {
   let query = supabase
@@ -64,7 +65,10 @@ export async function getAll(
 }
 
 // Get single document by ID
-export async function getById(id: number): Promise<Document | null> {
+export async function getById(
+  supabase: SupabaseClient,
+  id: number
+): Promise<Document | null> {
   const { data, error } = await supabase
     .from('documents')
     .select('*')
@@ -83,17 +87,21 @@ export async function getById(id: number): Promise<Document | null> {
 
 // Get document with all versions
 export async function getWithVersions(
+  supabase: SupabaseClient,
   id: number
 ): Promise<(Document & { versions: DocumentVersion[] }) | null> {
-  const doc = await getById(id);
+  const doc = await getById(supabase, id);
   if (!doc) return null;
 
-  const versions = await getVersions(id);
+  const versions = await getVersions(supabase, id);
   return { ...doc, versions };
 }
 
 // Create document
-export async function create(data: CreateDocumentData): Promise<Document> {
+export async function create(
+  supabase: SupabaseClient,
+  data: CreateDocumentData
+): Promise<Document> {
   if (!data.type || !VALID_TYPES.includes(data.type)) {
     validationError(`Invalid type. Must be one of: ${VALID_TYPES.join(', ')}`);
   }
@@ -117,8 +125,12 @@ export async function create(data: CreateDocumentData): Promise<Document> {
 }
 
 // Update document
-export async function update(id: number, data: UpdateDocumentData): Promise<Document> {
-  const existing = await getById(id);
+export async function update(
+  supabase: SupabaseClient,
+  id: number,
+  data: UpdateDocumentData
+): Promise<Document> {
+  const existing = await getById(supabase, id);
   if (!existing) {
     notFound('Document');
   }
@@ -153,8 +165,11 @@ export async function update(id: number, data: UpdateDocumentData): Promise<Docu
 }
 
 // Delete document
-export async function remove(id: number): Promise<boolean> {
-  const existing = await getById(id);
+export async function remove(
+  supabase: SupabaseClient,
+  id: number
+): Promise<boolean> {
+  const existing = await getById(supabase, id);
   if (!existing) {
     notFound('Document');
   }
@@ -169,7 +184,10 @@ export async function remove(id: number): Promise<boolean> {
 }
 
 // Get all versions for a document
-export async function getVersions(documentId: number): Promise<DocumentVersion[]> {
+export async function getVersions(
+  supabase: SupabaseClient,
+  documentId: number
+): Promise<DocumentVersion[]> {
   const { data, error } = await supabase
     .from('document_versions')
     .select('*')
@@ -185,10 +203,11 @@ export async function getVersions(documentId: number): Promise<DocumentVersion[]
 
 // Add new version
 export async function addVersion(
+  supabase: SupabaseClient,
   documentId: number,
   data: CreateVersionData
 ): Promise<DocumentVersion> {
-  const doc = await getById(documentId);
+  const doc = await getById(supabase, documentId);
   if (!doc) {
     notFound('Document');
   }

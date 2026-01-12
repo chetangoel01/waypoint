@@ -1,4 +1,4 @@
-import supabase from '../db/index.js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Application, ApplicationStatusOption, Contact } from '../types/index.js';
 import { validationError, notFound } from '../middleware/response.js';
 
@@ -32,7 +32,10 @@ export interface ApplicationFilters {
 }
 
 // Get all applications with optional filters
-export async function getAll(filters?: ApplicationFilters): Promise<Application[]> {
+export async function getAll(
+  supabase: SupabaseClient,
+  filters?: ApplicationFilters
+): Promise<Application[]> {
   let query = supabase
     .from('applications')
     .select('*')
@@ -55,7 +58,10 @@ export async function getAll(filters?: ApplicationFilters): Promise<Application[
 }
 
 // Get single application by ID
-export async function getById(id: number): Promise<Application | null> {
+export async function getById(
+  supabase: SupabaseClient,
+  id: number
+): Promise<Application | null> {
   const { data, error } = await supabase
     .from('applications')
     .select('*')
@@ -73,7 +79,10 @@ export async function getById(id: number): Promise<Application | null> {
 }
 
 // Create new application
-export async function create(data: CreateApplicationData): Promise<Application> {
+export async function create(
+  supabase: SupabaseClient,
+  data: CreateApplicationData
+): Promise<Application> {
   if (!data.company || !data.role) {
     validationError('Company and role are required');
   }
@@ -102,8 +111,12 @@ export async function create(data: CreateApplicationData): Promise<Application> 
 }
 
 // Update application
-export async function update(id: number, data: UpdateApplicationData): Promise<Application> {
-  const existing = await getById(id);
+export async function update(
+  supabase: SupabaseClient,
+  id: number,
+  data: UpdateApplicationData
+): Promise<Application> {
+  const existing = await getById(supabase, id);
   if (!existing) {
     notFound('Application');
   }
@@ -139,8 +152,11 @@ export async function update(id: number, data: UpdateApplicationData): Promise<A
 }
 
 // Delete application
-export async function remove(id: number): Promise<boolean> {
-  const existing = await getById(id);
+export async function remove(
+  supabase: SupabaseClient,
+  id: number
+): Promise<boolean> {
+  const existing = await getById(supabase, id);
   if (!existing) {
     notFound('Application');
   }
@@ -158,8 +174,12 @@ export async function remove(id: number): Promise<boolean> {
 }
 
 // Update status only
-export async function updateStatus(id: number, status: string): Promise<Application> {
-  const existing = await getById(id);
+export async function updateStatus(
+  supabase: SupabaseClient,
+  id: number,
+  status: string
+): Promise<Application> {
+  const existing = await getById(supabase, id);
   if (!existing) {
     notFound('Application');
   }

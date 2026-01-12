@@ -1,27 +1,39 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { asyncHandler, success } from '../middleware/response.js';
+import { AuthRequest } from '../middleware/auth.js';
 import {
   Settings,
   getAllSettings,
   setSetting,
   deleteSetting,
+  createSettingsHelper,
   type StatusOption,
 } from '../services/settings.js';
+import { decrypt } from '../utils/crypto.js';
 
 const router = Router();
 
 // GET /api/settings - get all settings (with sensitive values masked)
 router.get(
   '/',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const settings = await getAllSettings();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const settings = await getAllSettings(req.supabase!);
 
     // Mask sensitive values
     const masked: Record<string, string | boolean> = {};
     for (const [key, value] of Object.entries(settings)) {
       if (key === Settings.OPENAI_API_KEY) {
-        // Only show if key is set, but mask the actual value
-        masked[key] = value ? '••••••••' + value.slice(-4) : '';
+        // Decrypt and mask the API key for display
+        if (value) {
+          try {
+            const decrypted = decrypt(value);
+            masked[key] = '••••••••' + decrypted.slice(-4);
+          } catch {
+            masked[key] = '••••••••****';
+          }
+        } else {
+          masked[key] = '';
+        }
         masked['api_key_set'] = !!value;
       } else {
         masked[key] = value;
@@ -35,14 +47,17 @@ router.get(
 // GET /api/settings/ai-status - check if AI is configured
 router.get(
   '/ai-status',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const apiKey = await Settings.getApiKey();
-    const isFromEnv = Settings.isKeyFromEnv();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    const apiKey = await settingsHelper.getApiKey();
+    const isFromEnv = settingsHelper.isKeyFromEnv();
+    const encryptionEnabled = settingsHelper.isEncryptionEnabled();
     res.json(
       success({
         configured: !!apiKey,
         keyPreview: apiKey ? '••••' + apiKey.slice(-4) : null,
         source: isFromEnv ? 'env' : 'database',
+        encrypted: !isFromEnv && encryptionEnabled,
       })
     );
   })
@@ -51,7 +66,7 @@ router.get(
 // PUT /api/settings/api-key - set OpenAI API key
 router.put(
   '/api-key',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { apiKey } = req.body;
 
     if (!apiKey || typeof apiKey !== 'string') {
@@ -69,7 +84,8 @@ router.put(
       return;
     }
 
-    await Settings.setApiKey(apiKey);
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    await settingsHelper.setApiKey(apiKey);
 
     res.json(
       success({
@@ -83,8 +99,9 @@ router.put(
 // DELETE /api/settings/api-key - remove API key
 router.delete(
   '/api-key',
-  asyncHandler(async (_req: Request, res: Response) => {
-    await Settings.clearApiKey();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    await settingsHelper.clearApiKey();
     res.json(success({ message: 'API key removed successfully' }));
   })
 );
@@ -92,8 +109,9 @@ router.delete(
 // GET /api/settings/statuses - get status options
 router.get(
   '/statuses',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const statuses = await Settings.getStatusOptions();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    const statuses = await settingsHelper.getStatusOptions();
     res.json(success(statuses));
   })
 );
@@ -101,7 +119,7 @@ router.get(
 // PUT /api/settings/statuses - update status options
 router.put(
   '/statuses',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { statuses } = req.body;
 
     if (!Array.isArray(statuses) || statuses.length === 0) {
@@ -125,7 +143,8 @@ router.put(
       }
     }
 
-    await Settings.setStatusOptions(statuses as StatusOption[]);
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    await settingsHelper.setStatusOptions(statuses as StatusOption[]);
     res.json(success(statuses));
   })
 );
@@ -133,9 +152,10 @@ router.put(
 // POST /api/settings/statuses/reset - reset to defaults
 router.post(
   '/statuses/reset',
-  asyncHandler(async (_req: Request, res: Response) => {
-    await Settings.resetStatusOptions();
-    const statuses = await Settings.getStatusOptions();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const settingsHelper = createSettingsHelper(req.supabase!);
+    await settingsHelper.resetStatusOptions();
+    const statuses = await settingsHelper.getStatusOptions();
     res.json(success(statuses));
   })
 );
@@ -143,7 +163,7 @@ router.post(
 // PUT /api/settings/:key - set a generic setting
 router.put(
   '/:key',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { key } = req.params;
     const { value } = req.body;
 
@@ -162,7 +182,7 @@ router.put(
       return;
     }
 
-    await setSetting(key, String(value));
+    await setSetting(req.supabase!, key, String(value));
     res.json(success({ key, value: String(value) }));
   })
 );
@@ -170,7 +190,7 @@ router.put(
 // DELETE /api/settings/:key - delete a setting
 router.delete(
   '/:key',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { key } = req.params;
 
     // Don't allow deleting the API key through generic endpoint
@@ -183,7 +203,7 @@ router.delete(
       return;
     }
 
-    await deleteSetting(key);
+    await deleteSetting(req.supabase!, key);
     res.json(success({ message: `Setting '${key}' deleted` }));
   })
 );

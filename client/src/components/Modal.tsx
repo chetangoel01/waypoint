@@ -73,3 +73,6 @@ interface ModalActionsProps {
 export function ModalActions({ children }: ModalActionsProps) {
   return <div className={styles.actions}>{children}</div>;
 }
+
+// Export modal styles for use in confirmation messages
+export { styles as modalStyles };

@@ -22,7 +22,7 @@ import {
   useDeleteStory,
 } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions } from './Modal';
+import { Modal, ModalActions, modalStyles } from './Modal';
 import type { WorkExperience, Education, Skill, Project, Story } from '../types';
 import styles from '../App.module.css';
 import sectionStyles from './ProfileSections.module.css';
@@ -337,7 +337,7 @@ export function ExperienceSection() {
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Experience?" size="sm">
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete your experience at <strong>{deleteConfirm?.company}</strong>?
         </p>
         <ModalActions>
@@ -657,7 +657,7 @@ export function EducationSection() {
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Education?" size="sm">
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete <strong>{deleteConfirm?.institution}</strong>?
         </p>
         <ModalActions>
@@ -1168,7 +1168,7 @@ export function ProjectsSection() {
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Project?" size="sm">
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>?
         </p>
         <ModalActions>
@@ -1499,7 +1499,7 @@ export function StoriesSection() {
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Story?" size="sm">
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>?
         </p>
         <ModalActions>

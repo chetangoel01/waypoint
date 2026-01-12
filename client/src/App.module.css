@@ -463,6 +463,27 @@
   height: 18px;
 }
 
+/* Link-style button (text button) */
+.buttonLink {
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-2) 0;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.buttonLink:hover {
+  color: var(--color-ink);
+}
+
+.buttonLinkDanger {
+  color: var(--color-rose);
+}
+
+.buttonLinkDanger:hover {
+  color: #b91c1c;
+}
+
 /* ============================================
    APPLICATIONS LIST
    ============================================ */
@@ -1160,4 +1181,68 @@
   padding: var(--space-6);
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
+}
+
+/* ============================================
+   AUTHENTICATION
+   ============================================ */
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--surface-page);
+  color: var(--color-ink-muted);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-medium);
+  border-top-color: var(--color-terracotta);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: var(--space-4);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.userEmail {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  word-break: break-all;
+}
+
+.signOutButton {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: 
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.signOutButton:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-ink);
+  border-color: var(--border-strong);
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApplications, useCreateApplication, useDeleteApplication } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions } from './Modal';
+import { Modal, ModalActions, modalStyles } from './Modal';
 import styles from '../App.module.css';
 
 const getStatusClass = (status: string) => {
@@ -325,7 +325,7 @@ export function ApplicationsList() {
         title="Delete Application?"
         size="sm"
       >
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete the application for <strong>{deleteConfirm?.company}</strong>? This action cannot be undone.
         </p>
         <ModalActions>

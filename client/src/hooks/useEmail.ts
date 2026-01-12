@@ -22,18 +22,7 @@ export function useEmailStatus() {
   });
 }
 
-// Save Gmail OAuth credentials
-export function useSaveEmailCredentials() {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ clientId, clientSecret }: { clientId: string; clientSecret: string }) =>
-      emailApi.saveCredentials(clientId, clientSecret),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: emailKeys.status() });
-    },
-  });
-}
 
 // Get OAuth authorization URL
 export function useGetAuthUrl() {

@@ -1,64 +1,58 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { success, asyncHandler, validationError } from '../middleware/response.js';
-import { Settings } from '../services/settings.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { createSettingsHelper } from '../services/settings.js';
 import * as gmailOAuth from '../services/gmail-oauth.js';
 import * as emailSync from '../services/email-sync.js';
 import config from '../config/index.js';
-import type { EmailStatus } from '../types/index.js';
+import supabase from '../db/index.js';
+import type { EmailStatus, SyncProgress } from '../types/index.js';
 
 const router = Router();
+
+// Public router for OAuth callback (no auth required)
+export const emailCallbackRouter = Router();
 
 // GET /api/email/status - Get Gmail connection status
 router.get(
   '/status',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const settingsHelper = createSettingsHelper(req.supabase!);
+
     const status: EmailStatus = {
-      connected: await gmailOAuth.isConnected(),
-      email: (await Settings.getGmailUserEmail()) || undefined,
-      lastSync: (await Settings.getLastSyncDate()) || undefined,
-      hasCredentials: await gmailOAuth.hasCredentials(),
+      connected: await gmailOAuth.isConnected(req.supabase!, userId),
+      email: (await gmailOAuth.getGmailUserEmail(req.supabase!, userId)) || undefined,
+      lastSync: (await settingsHelper.getLastSyncDate()) || undefined,
+      hasCredentials: gmailOAuth.hasCredentials(),
     };
 
     res.json(success(status));
   })
 );
 
-// PUT /api/email/credentials - Save Gmail OAuth credentials
-router.put(
-  '/credentials',
-  asyncHandler(async (req, res) => {
-    const { clientId, clientSecret } = req.body;
-
-    if (!clientId || !clientSecret) {
-      return validationError('Client ID and Client Secret are required');
-    }
-
-    await Settings.setGmailCredentials(clientId, clientSecret);
-
-    res.json(success({ message: 'Credentials saved' }));
-  })
-);
-
 // GET /api/email/auth-url - Get OAuth authorization URL
 router.get(
   '/auth-url',
-  asyncHandler(async (_req, res) => {
-    if (!(await gmailOAuth.hasCredentials())) {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!gmailOAuth.hasCredentials()) {
       return validationError(
-        'Gmail credentials not configured. Please add Client ID and Client Secret first.'
+        'Gmail credentials not configured. Set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET environment variables.'
       );
     }
 
-    const url = await gmailOAuth.getAuthUrl();
+    const userId = req.user!.id;
+    const url = gmailOAuth.getAuthUrl(userId);
     res.json(success({ url }));
   })
 );
 
-// GET /api/email/callback - OAuth callback handler
-router.get(
+// GET /api/email/callback - OAuth callback handler (PUBLIC - no auth required)
+// This is mounted separately without auth middleware since it's a redirect from Google
+emailCallbackRouter.get(
   '/callback',
-  asyncHandler(async (req, res) => {
-    const { code, error } = req.query;
+  asyncHandler(async (req: Request, res: Response) => {
+    const { code, error, state } = req.query;
 
     if (error) {
       // Redirect to settings page with error
@@ -73,8 +67,18 @@ router.get(
       );
     }
 
+    // State contains the user ID
+    const userId = state as string;
+    if (!userId) {
+      return res.redirect(
+        `${config.clientUrl}/settings?email_error=Invalid state parameter`
+      );
+    }
+
     try {
-      await gmailOAuth.exchangeCode(code);
+      // Use service-level Supabase client (bypasses RLS, which is fine since we
+      // verified the user ID via the OAuth state parameter set during auth initiation)
+      await gmailOAuth.exchangeCode(supabase, userId, code);
       // Redirect to settings page with success
       res.redirect(`${config.clientUrl}/settings?email_connected=true`);
     } catch (err) {
@@ -89,19 +93,23 @@ router.get(
 // POST /api/email/sync - Trigger email sync (simple, no progress)
 router.post(
   '/sync',
-  asyncHandler(async (_req, res) => {
-    if (!(await gmailOAuth.isConnected())) {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+
+    if (!(await gmailOAuth.isConnected(req.supabase!, userId))) {
       return validationError('Gmail not connected');
     }
 
-    const result = await emailSync.syncEmails();
+    const result = await emailSync.syncEmails(req.supabase!, userId);
     res.json(success(result));
   })
 );
 
 // GET /api/email/sync-stream - Trigger email sync with SSE progress
-router.get('/sync-stream', async (req, res) => {
-  if (!(await gmailOAuth.isConnected())) {
+router.get('/sync-stream', async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+
+  if (!(await gmailOAuth.isConnected(req.supabase!, userId))) {
     res.status(400).json({ success: false, error: 'Gmail not connected' });
     return;
   }
@@ -119,9 +127,13 @@ router.get('/sync-stream', async (req, res) => {
   };
 
   try {
-    const result = await emailSync.syncEmails((progress) => {
-      sendProgress({ type: 'progress', ...progress });
-    });
+    const result = await emailSync.syncEmails(
+      req.supabase!,
+      userId,
+      (progress: SyncProgress) => {
+        sendProgress({ type: 'progress', ...progress });
+      }
+    );
 
     // Send final result
     sendProgress({ type: 'result', ...result });
@@ -136,8 +148,9 @@ router.get('/sync-stream', async (req, res) => {
 // DELETE /api/email/disconnect - Disconnect Gmail
 router.delete(
   '/disconnect',
-  asyncHandler(async (_req, res) => {
-    await gmailOAuth.disconnect();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    await gmailOAuth.disconnect(req.supabase!, userId);
     res.json(success({ message: 'Gmail disconnected' }));
   })
 );
@@ -145,9 +158,9 @@ router.delete(
 // GET /api/email/history - Get processed email history
 router.get(
   '/history',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const limit = parseInt(String(req.query.limit)) || 50;
-    const history = await emailSync.getProcessedEmails(limit);
+    const history = await emailSync.getProcessedEmails(req.supabase!, limit);
     res.json(success(history));
   })
 );

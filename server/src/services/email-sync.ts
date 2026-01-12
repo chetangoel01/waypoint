@@ -1,5 +1,5 @@
-import supabase from '../db/index.js';
-import { Settings } from './settings.js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { createSettingsHelper } from './settings.js';
 import { fetchRecentEmails } from './gmail.js';
 import { processEmail } from './email-processor.js';
 import * as applicationsService from './applications.js';
@@ -12,7 +12,10 @@ import type {
 } from '../types/index.js';
 
 // Check if an email has already been processed
-async function isEmailProcessed(emailId: string): Promise<boolean> {
+async function isEmailProcessed(
+  supabase: SupabaseClient,
+  emailId: string
+): Promise<boolean> {
   const { data } = await supabase
     .from('processed_emails')
     .select('id')
@@ -24,6 +27,7 @@ async function isEmailProcessed(emailId: string): Promise<boolean> {
 
 // Save a processed email record
 async function saveProcessedEmail(
+  supabase: SupabaseClient,
   emailId: string,
   isJobRelated: boolean,
   applicationId: number | null,
@@ -45,6 +49,7 @@ async function saveProcessedEmail(
 
 // Find existing application that might match this job info
 async function findMatchingApplication(
+  supabase: SupabaseClient,
   jobInfo: ExtractedJobInfo
 ): Promise<{ id: number } | null> {
   // Try to find by company and role (case-insensitive)
@@ -90,6 +95,7 @@ function parseEmailDate(dateString: string): string {
 
 // Create a new application from email job info
 async function createApplicationFromEmail(
+  supabase: SupabaseClient,
   jobInfo: ExtractedJobInfo,
   email: GmailMessage
 ): Promise<number> {
@@ -132,12 +138,13 @@ async function createApplicationFromEmail(
 
 // Update an existing application with new status from email
 async function updateApplicationFromEmail(
+  supabase: SupabaseClient,
   applicationId: number,
   jobInfo: ExtractedJobInfo,
   email: GmailMessage
 ): Promise<void> {
   // Get current application
-  const app = await applicationsService.getById(applicationId);
+  const app = await applicationsService.getById(supabase, applicationId);
   if (!app) return;
 
   // Determine if we should update status
@@ -191,7 +198,12 @@ async function updateApplicationFromEmail(
 export type ProgressCallback = (progress: SyncProgress) => void;
 
 // Main sync function with optional progress callback
-export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncResult> {
+export async function syncEmails(
+  supabase: SupabaseClient,
+  userId: string,
+  onProgress?: ProgressCallback
+): Promise<SyncResult> {
+  const settings = createSettingsHelper(supabase);
   const result: SyncResult = {
     processedCount: 0,
     newApplications: 0,
@@ -208,7 +220,7 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 
   try {
     // Get last sync date, default to 7 days ago for first sync
-    const lastSync = await Settings.getLastSyncDate();
+    const lastSync = await settings.getLastSyncDate();
     const afterDate = lastSync || getDateDaysAgo(7);
 
     sendProgress({
@@ -219,12 +231,12 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
     });
 
     // Fetch recent emails
-    const emails = await fetchRecentEmails(100, afterDate);
+    const emails = await fetchRecentEmails(supabase, userId, 100, afterDate);
 
     // Filter out already processed emails
     const emailsToProcess: GmailMessage[] = [];
     for (const email of emails) {
-      const processed = await isEmailProcessed(email.id);
+      const processed = await isEmailProcessed(supabase, email.id);
       if (!processed) {
         emailsToProcess.push(email);
       }
@@ -253,12 +265,12 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 
       try {
         // Process the email
-        const { classification, jobInfo } = await processEmail(email);
+        const { classification, jobInfo } = await processEmail(supabase, email);
         result.processedCount++;
 
         if (!classification.isJobRelated || !jobInfo) {
           // Save as non-job-related
-          await saveProcessedEmail(email.id, false, null, email);
+          await saveProcessedEmail(supabase, email.id, false, null, email);
           continue;
         }
 
@@ -271,23 +283,23 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
         });
 
         // Check for existing application
-        const existingApp = await findMatchingApplication(jobInfo);
+        const existingApp = await findMatchingApplication(supabase, jobInfo);
 
         let applicationId: number;
 
         if (existingApp) {
           // Update existing application
-          await updateApplicationFromEmail(existingApp.id, jobInfo, email);
+          await updateApplicationFromEmail(supabase, existingApp.id, jobInfo, email);
           applicationId = existingApp.id;
           result.updatedApplications++;
         } else {
           // Create new application
-          applicationId = await createApplicationFromEmail(jobInfo, email);
+          applicationId = await createApplicationFromEmail(supabase, jobInfo, email);
           result.newApplications++;
         }
 
         // Save processed email record
-        await saveProcessedEmail(email.id, true, applicationId, email);
+        await saveProcessedEmail(supabase, email.id, true, applicationId, email);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         result.errors.push(`Email ${email.id}: ${errorMessage}`);
@@ -295,7 +307,7 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
     }
 
     // Update last sync date
-    await Settings.setLastSyncDate(new Date().toISOString());
+    await settings.setLastSyncDate(new Date().toISOString());
 
     sendProgress({
       stage: 'complete',
@@ -319,7 +331,10 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 }
 
 // Get processed emails for display
-export async function getProcessedEmails(limit: number = 50): Promise<ProcessedEmail[]> {
+export async function getProcessedEmails(
+  supabase: SupabaseClient,
+  limit: number = 50
+): Promise<ProcessedEmail[]> {
   const { data, error } = await supabase
     .from('processed_emails')
     .select('*')

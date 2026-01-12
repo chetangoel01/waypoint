@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { asyncHandler, success, notFound } from '../middleware/response.js';
+import { AuthRequest } from '../middleware/auth.js';
 import * as profileService from '../services/profile.js';
 
 const router = Router();
@@ -7,11 +8,8 @@ const router = Router();
 // GET /api/profile - Get the user profile
 router.get(
   '/',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const profile = await profileService.getProfile();
-    if (!profile) {
-      notFound('Profile');
-    }
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const profile = await profileService.getOrCreateProfile(req.supabase!);
     res.json(success(profile));
   })
 );
@@ -19,8 +17,8 @@ router.get(
 // PUT /api/profile - Update the user profile
 router.put(
   '/',
-  asyncHandler(async (req: Request, res: Response) => {
-    const profile = await profileService.updateProfile(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const profile = await profileService.updateProfile(req.supabase!, req.body);
     res.json(success(profile));
   })
 );
@@ -28,34 +26,34 @@ router.put(
 // Work Experience routes
 router.get(
   '/experience',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const experience = await profileService.getWorkExperience();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const experience = await profileService.getWorkExperience(req.supabase!);
     res.json(success(experience));
   })
 );
 
 router.post(
   '/experience',
-  asyncHandler(async (req: Request, res: Response) => {
-    const experience = await profileService.createWorkExperience(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const experience = await profileService.createWorkExperience(req.supabase!, req.body);
     res.status(201).json(success(experience));
   })
 );
 
 router.put(
   '/experience/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const experience = await profileService.updateWorkExperience(id, req.body);
+    const experience = await profileService.updateWorkExperience(req.supabase!, id, req.body);
     res.json(success(experience));
   })
 );
 
 router.delete(
   '/experience/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    await profileService.deleteWorkExperience(id);
+    await profileService.deleteWorkExperience(req.supabase!, id);
     res.json(success({ deleted: true }));
   })
 );
@@ -63,34 +61,34 @@ router.delete(
 // Education routes
 router.get(
   '/education',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const education = await profileService.getEducation();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const education = await profileService.getEducation(req.supabase!);
     res.json(success(education));
   })
 );
 
 router.post(
   '/education',
-  asyncHandler(async (req: Request, res: Response) => {
-    const education = await profileService.createEducation(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const education = await profileService.createEducation(req.supabase!, req.body);
     res.status(201).json(success(education));
   })
 );
 
 router.put(
   '/education/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const education = await profileService.updateEducation(id, req.body);
+    const education = await profileService.updateEducation(req.supabase!, id, req.body);
     res.json(success(education));
   })
 );
 
 router.delete(
   '/education/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    await profileService.deleteEducation(id);
+    await profileService.deleteEducation(req.supabase!, id);
     res.json(success({ deleted: true }));
   })
 );
@@ -98,34 +96,34 @@ router.delete(
 // Skills routes
 router.get(
   '/skills',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const skills = await profileService.getSkills();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const skills = await profileService.getSkills(req.supabase!);
     res.json(success(skills));
   })
 );
 
 router.post(
   '/skills',
-  asyncHandler(async (req: Request, res: Response) => {
-    const skill = await profileService.createSkill(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const skill = await profileService.createSkill(req.supabase!, req.body);
     res.status(201).json(success(skill));
   })
 );
 
 router.put(
   '/skills/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const skill = await profileService.updateSkill(id, req.body);
+    const skill = await profileService.updateSkill(req.supabase!, id, req.body);
     res.json(success(skill));
   })
 );
 
 router.delete(
   '/skills/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    await profileService.deleteSkill(id);
+    await profileService.deleteSkill(req.supabase!, id);
     res.json(success({ deleted: true }));
   })
 );
@@ -133,34 +131,34 @@ router.delete(
 // Projects routes
 router.get(
   '/projects',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const projects = await profileService.getProjects();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const projects = await profileService.getProjects(req.supabase!);
     res.json(success(projects));
   })
 );
 
 router.post(
   '/projects',
-  asyncHandler(async (req: Request, res: Response) => {
-    const project = await profileService.createProject(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const project = await profileService.createProject(req.supabase!, req.body);
     res.status(201).json(success(project));
   })
 );
 
 router.put(
   '/projects/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const project = await profileService.updateProject(id, req.body);
+    const project = await profileService.updateProject(req.supabase!, id, req.body);
     res.json(success(project));
   })
 );
 
 router.delete(
   '/projects/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    await profileService.deleteProject(id);
+    await profileService.deleteProject(req.supabase!, id);
     res.json(success({ deleted: true }));
   })
 );
@@ -168,34 +166,34 @@ router.delete(
 // Stories routes
 router.get(
   '/stories',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const stories = await profileService.getStories();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stories = await profileService.getStories(req.supabase!);
     res.json(success(stories));
   })
 );
 
 router.post(
   '/stories',
-  asyncHandler(async (req: Request, res: Response) => {
-    const story = await profileService.createStory(req.body);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const story = await profileService.createStory(req.supabase!, req.body);
     res.status(201).json(success(story));
   })
 );
 
 router.put(
   '/stories/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const story = await profileService.updateStory(id, req.body);
+    const story = await profileService.updateStory(req.supabase!, id, req.body);
     res.json(success(story));
   })
 );
 
 router.delete(
   '/stories/:id',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    await profileService.deleteStory(id);
+    await profileService.deleteStory(req.supabase!, id);
     res.json(success({ deleted: true }));
   })
 );

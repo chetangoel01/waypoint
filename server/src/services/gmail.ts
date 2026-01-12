@@ -1,12 +1,15 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { getGmailClient } from './gmail-oauth.js';
 import type { GmailMessage } from '../types/index.js';
 
 // Fetch recent emails from Gmail
 export async function fetchRecentEmails(
+  supabase: SupabaseClient,
+  userId: string,
   maxResults: number = 50,
   afterDate?: string
 ): Promise<GmailMessage[]> {
-  const gmail = await getGmailClient();
+  const gmail = await getGmailClient(supabase, userId);
 
   // Build query - get emails after a certain date if specified
   let query = '';

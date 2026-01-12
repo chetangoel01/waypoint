@@ -1,6 +1,7 @@
 // Profile types
 export interface Profile {
   id: number;
+  user_id: string;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -20,6 +21,7 @@ export interface Profile {
 // Work experience types
 export interface WorkExperience {
   id: number;
+  user_id: string;
   company: string;
   role: string;
   start_date: string | null;
@@ -33,6 +35,7 @@ export interface WorkExperience {
 // Education types
 export interface Education {
   id: number;
+  user_id: string;
   institution: string;
   degree: string;
   field: string | null;
@@ -47,6 +50,7 @@ export interface Education {
 // Skill types
 export interface Skill {
   id: number;
+  user_id: string;
   category: string;
   name: string;
   proficiency: string | null;
@@ -56,6 +60,7 @@ export interface Skill {
 // Project types
 export interface Project {
   id: number;
+  user_id: string;
   name: string;
   description: string | null;
   technologies: string[] | null;
@@ -68,6 +73,7 @@ export interface Project {
 // Story types (STAR format)
 export interface Story {
   id: number;
+  user_id: string;
   title: string;
   situation: string | null;
   task: string | null;
@@ -87,6 +93,7 @@ export interface ApplicationStatusOption {
 
 export interface Application {
   id: number;
+  user_id: string;
   company: string;
   role: string;
   url: string | null;
@@ -113,6 +120,7 @@ export type DocumentType = 'cover_letter' | 'custom_question';
 
 export interface Document {
   id: number;
+  user_id: string;
   application_id: number | null;
   type: DocumentType;
   question: string | null;
@@ -190,4 +198,18 @@ export interface SyncProgress {
   current: number;
   total: number;
   emailSubject?: string;
+}
+
+// OAuth token types
+export interface OAuthToken {
+  id: string;
+  user_id: string;
+  provider: string;
+  access_token: string;
+  refresh_token: string | null;
+  expires_at: string | null;
+  scopes: string[] | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }

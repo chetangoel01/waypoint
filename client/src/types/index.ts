@@ -11,6 +11,7 @@ export interface ApplicationStatusOption {
 
 export interface Profile {
   id: number;
+  user_id: string;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -29,6 +30,7 @@ export interface Profile {
 
 export interface WorkExperience {
   id: number;
+  user_id: string;
   company: string;
   role: string;
   start_date: string | null;
@@ -41,6 +43,7 @@ export interface WorkExperience {
 
 export interface Education {
   id: number;
+  user_id: string;
   institution: string;
   degree: string;
   field: string | null;
@@ -54,6 +57,7 @@ export interface Education {
 
 export interface Skill {
   id: number;
+  user_id: string;
   category: string;
   name: string;
   proficiency: string | null;
@@ -62,6 +66,7 @@ export interface Skill {
 
 export interface Project {
   id: number;
+  user_id: string;
   name: string;
   description: string | null;
   technologies: string[] | null;
@@ -73,6 +78,7 @@ export interface Project {
 
 export interface Story {
   id: number;
+  user_id: string;
   title: string;
   situation: string | null;
   task: string | null;
@@ -92,6 +98,7 @@ export interface Contact {
 
 export interface Application {
   id: number;
+  user_id: string;
   company: string;
   role: string;
   url: string | null;
@@ -110,6 +117,7 @@ export type DocumentType = 'cover_letter' | 'custom_question';
 
 export interface Document {
   id: number;
+  user_id: string;
   application_id: number | null;
   type: DocumentType;
   question: string | null;

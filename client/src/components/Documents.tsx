@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDocuments, useDeleteDocument, useApplications, useAddDocumentVersion, useAiStatus } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions } from './Modal';
+import { Modal, ModalActions, modalStyles } from './Modal';
 import { DocumentEditorModal } from './DocumentEditorModal';
 import { VersionHistoryModal } from './VersionHistoryModal';
 import { GenerateModal } from './GenerateModal';
@@ -456,7 +456,7 @@ export function Documents() {
         title="Delete Document?"
         size="sm"
       >
-        <p className={styles.formHint}>
+        <p className={modalStyles.confirmMessage}>
           Are you sure you want to delete this {deleteConfirm?.type === 'cover_letter' ? 'cover letter' : 'response'}? This action cannot be undone.
         </p>
         <ModalActions>

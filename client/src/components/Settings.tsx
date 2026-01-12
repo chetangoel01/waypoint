@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAiStatus, useSaveApiKey, useClearApiKey, useStatusOptions, useUpdateStatuses, useResetStatuses } from '../hooks';
 import { Icons } from './Icons';
 import { EmailSettings } from './EmailSettings';
+import { Toast } from './Toast';
 import styles from '../App.module.css';
 import type { StatusOption } from '../services/api';
 
@@ -20,14 +21,6 @@ export function Settings() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingStatuses, setEditingStatuses] = useState<StatusOption[] | null>(null);
   const [newStatus, setNewStatus] = useState({ key: '', label: '', color: 'gray' as StatusOption['color'] });
-
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   const handleSaveApiKey = async () => {
     if (!apiKeyInput.trim()) return;
@@ -110,38 +103,12 @@ export function Settings() {
     <div className={styles.mainInner}>
       {/* Toast notification */}
       {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 24,
-            right: 24,
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-lg)',
-            backgroundColor: toast.type === 'success' ? 'var(--color-sage)' : 'var(--color-rose)',
-            color: 'white',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 500,
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            zIndex: 1000,
-            animation: 'slideIn 0.3s var(--ease-out)',
-          }}
-        >
-          <span style={{ width: 16, height: 16, display: 'flex', flexShrink: 0 }}>
-            {toast.type === 'success' ? <Icons.Check /> : <Icons.AlertCircle />}
-          </span>
-          {toast.message}
-        </div>
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onDismiss={() => setToast(null)}
+        />
       )}
-
-      <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
 
       <div className={styles.page}>
         <header className={styles.pageHeader}>
@@ -169,6 +136,7 @@ export function Settings() {
                 <span className={`${styles.statusBadge} ${styles.statusOffer}`}>
                   Connected {aiStatus.keyPreview && `(${aiStatus.keyPreview})`}
                   {aiStatus.source === 'env' && ' • from .env'}
+                  {aiStatus.source === 'database' && aiStatus.encrypted && ' • encrypted'}
                 </span>
               ) : (
                 <span className={`${styles.statusBadge} ${styles.statusInterview}`}>
@@ -236,14 +204,9 @@ export function Settings() {
               {aiStatus?.configured && (
                 <div className={styles.formGroup}>
                   <button 
+                    className={`${styles.buttonLink} ${styles.buttonLinkDanger}`}
                     onClick={handleClearApiKey}
                     disabled={clearApiKey.isPending}
-                    style={{ 
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--color-rose)',
-                      textDecoration: 'underline',
-                      textUnderlineOffset: '2px',
-                    }}
                   >
                     {clearApiKey.isPending ? 'Removing...' : 'Remove API key'}
                   </button>
@@ -338,13 +301,10 @@ export function Settings() {
                   Cancel
                 </button>
                 <button
+                  className={styles.buttonLink}
                   onClick={handleResetStatuses}
                   disabled={resetStatuses.isPending}
-                  style={{ 
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-ink-muted)',
-                    marginLeft: 'auto',
-                  }}
+                  style={{ marginLeft: 'auto' }}
                 >
                   Reset to defaults
                 </button>

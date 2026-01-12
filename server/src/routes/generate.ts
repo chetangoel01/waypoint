@@ -1,11 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { success } from '../middleware/response.js';
+import { AuthRequest } from '../middleware/auth.js';
 import * as aiService from '../services/ai.js';
 
 const router = Router();
 
 // POST /api/generate/cover-letter
-router.post('/cover-letter', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/cover-letter', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { applicationId, additionalContext, tone } = req.body;
 
@@ -14,7 +15,7 @@ router.post('/cover-letter', async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const result = await aiService.generateCoverLetter({
+    const result = await aiService.generateCoverLetter(req.supabase!, {
       applicationId,
       additionalContext,
       tone,
@@ -27,7 +28,7 @@ router.post('/cover-letter', async (req: Request, res: Response, next: NextFunct
 });
 
 // POST /api/generate/custom-response
-router.post('/custom-response', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/custom-response', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { applicationId, question, maxLength } = req.body;
 
@@ -41,7 +42,7 @@ router.post('/custom-response', async (req: Request, res: Response, next: NextFu
       return;
     }
 
-    const result = await aiService.generateCustomResponse({
+    const result = await aiService.generateCustomResponse(req.supabase!, {
       applicationId,
       question,
       maxLength,
@@ -54,7 +55,7 @@ router.post('/custom-response', async (req: Request, res: Response, next: NextFu
 });
 
 // POST /api/generate/refine
-router.post('/refine', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/refine', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { content, instruction } = req.body;
 
@@ -68,7 +69,7 @@ router.post('/refine', async (req: Request, res: Response, next: NextFunction) =
       return;
     }
 
-    const result = await aiService.refineContent({
+    const result = await aiService.refineContent(req.supabase!, {
       content,
       instruction,
     });
@@ -80,16 +81,17 @@ router.post('/refine', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // GET /api/generate/status - check if AI is configured
-router.get('/status', (_req: Request, res: Response) => {
+router.get('/status', async (req: AuthRequest, res: Response) => {
+  const configured = await aiService.isAiConfigured(req.supabase!);
   res.json(success({
-    configured: aiService.isAiConfigured(),
+    configured,
   }));
 });
 
 // GET /api/generate/context - get the applicant context that would be sent to AI
-router.get('/context', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/context', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const context = await aiService.getApplicantContext();
+    const context = await aiService.getApplicantContext(req.supabase!);
     res.json(success({ context }));
   } catch (err) {
     next(err);

@@ -51,7 +51,7 @@ export function useCreateExperience() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<WorkExperience, 'id' | 'created_at' | 'updated_at'>) =>
+    mutationFn: (data: Omit<WorkExperience, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
       experienceApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: experienceKeys.list() });
@@ -95,7 +95,7 @@ export function useCreateEducation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Education, 'id' | 'created_at' | 'updated_at'>) =>
+    mutationFn: (data: Omit<Education, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
       educationApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: educationKeys.list() });
@@ -150,7 +150,7 @@ export function useCreateSkill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Skill, 'id' | 'created_at'>) => skillsApi.create(data),
+    mutationFn: (data: Omit<Skill, 'id' | 'created_at' | 'user_id'>) => skillsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: skillsKeys.list() });
     },
@@ -193,7 +193,7 @@ export function useCreateProject() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Project, 'id' | 'created_at' | 'updated_at'>) =>
+    mutationFn: (data: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
       projectsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectsKeys.list() });
@@ -237,7 +237,7 @@ export function useCreateStory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Story, 'id' | 'created_at' | 'updated_at'>) =>
+    mutationFn: (data: Omit<Story, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
       storiesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: storiesKeys.list() });

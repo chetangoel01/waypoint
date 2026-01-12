@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import type {
   Application,
   Profile,
@@ -30,21 +31,55 @@ export class ApiError extends Error {
   }
 }
 
+// Get auth headers from Supabase session
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token && {
+      'Authorization': `Bearer ${session.access_token}`
+    })
+  };
+}
+
 async function request<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  const headers = await getAuthHeaders();
+  
   const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...headers,
       ...options?.headers,
     },
-    ...options,
   });
 
   const json: ApiResponseWrapper<T> = await response.json();
 
   if (!response.ok || !json.success) {
+    // Handle 401 errors by potentially refreshing session
+    if (response.status === 401) {
+      // Try to refresh the session
+      const { error } = await supabase.auth.refreshSession();
+      if (!error) {
+        // Retry the request with new token
+        const newHeaders = await getAuthHeaders();
+        const retryResponse = await fetch(`${API_BASE}${endpoint}`, {
+          ...options,
+          headers: {
+            ...newHeaders,
+            ...options?.headers,
+          },
+        });
+        const retryJson: ApiResponseWrapper<T> = await retryResponse.json();
+        if (retryResponse.ok && retryJson.success) {
+          return retryJson.data;
+        }
+      }
+    }
     throw new ApiError(json.error || `HTTP error: ${response.status}`, response.status);
   }
 
@@ -55,7 +90,7 @@ async function request<T>(
 export const applicationsApi = {
   list: () => request<Application[]>('/applications'),
   get: (id: number) => request<Application>(`/applications/${id}`),
-  create: (data: Omit<Application, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<Application, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<Application>('/applications', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -93,7 +128,7 @@ export const documentsApi = {
       `/documents${applicationId ? `?application_id=${applicationId}` : ''}`
     ),
   get: (id: number) => request<Document & { versions: DocumentVersion[] }>(`/documents/${id}`),
-  create: (data: Omit<Document, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<Document>('/documents', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -121,12 +156,12 @@ export const documentsApi = {
 export const experienceApi = {
   list: () => request<WorkExperience[]>('/profile/experience'),
   get: (id: number) => request<WorkExperience>(`/profile/experience/${id}`),
-  create: (data: Omit<WorkExperience, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<WorkExperience, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<WorkExperience>('/profile/experience', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<WorkExperience>) =>
+  update: (id: number, data: Partial<Omit<WorkExperience, 'user_id'>>) =>
     request<WorkExperience>(`/profile/experience/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -141,12 +176,12 @@ export const experienceApi = {
 export const educationApi = {
   list: () => request<Education[]>('/profile/education'),
   get: (id: number) => request<Education>(`/profile/education/${id}`),
-  create: (data: Omit<Education, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<Education, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<Education>('/profile/education', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<Education>) =>
+  update: (id: number, data: Partial<Omit<Education, 'user_id'>>) =>
     request<Education>(`/profile/education/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -160,12 +195,12 @@ export const educationApi = {
 // Skills endpoints
 export const skillsApi = {
   list: () => request<Skill[]>('/profile/skills'),
-  create: (data: Omit<Skill, 'id' | 'created_at'>) =>
+  create: (data: Omit<Skill, 'id' | 'created_at' | 'user_id'>) =>
     request<Skill>('/profile/skills', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<Skill>) =>
+  update: (id: number, data: Partial<Omit<Skill, 'user_id'>>) =>
     request<Skill>(`/profile/skills/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -180,7 +215,7 @@ export const skillsApi = {
 export const projectsApi = {
   list: () => request<Project[]>('/profile/projects'),
   get: (id: number) => request<Project>(`/profile/projects/${id}`),
-  create: (data: Omit<Project, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<Project>('/profile/projects', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -200,7 +235,7 @@ export const projectsApi = {
 export const storiesApi = {
   list: () => request<Story[]>('/profile/stories'),
   get: (id: number) => request<Story>(`/profile/stories/${id}`),
-  create: (data: Omit<Story, 'id' | 'created_at' | 'updated_at'>) =>
+  create: (data: Omit<Story, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
     request<Story>('/profile/stories', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -255,6 +290,7 @@ export interface AiStatus {
   configured: boolean;
   keyPreview: string | null;
   source: 'env' | 'database';
+  encrypted: boolean;
 }
 
 export interface StatusOption {
@@ -291,11 +327,6 @@ export const settingsApi = {
 // Email integration endpoints
 export const emailApi = {
   getStatus: () => request<EmailStatus>('/email/status'),
-  saveCredentials: (clientId: string, clientSecret: string) =>
-    request<{ message: string }>('/email/credentials', {
-      method: 'PUT',
-      body: JSON.stringify({ clientId, clientSecret }),
-    }),
   getAuthUrl: () => request<{ url: string }>('/email/auth-url'),
   sync: () => request<SyncResult>('/email/sync', { method: 'POST' }),
   disconnect: () =>

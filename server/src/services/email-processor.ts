@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { Settings } from './settings.js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { createSettingsHelper } from './settings.js';
 import type {
   EmailClassification,
   ExtractedJobInfo,
@@ -7,8 +8,9 @@ import type {
 } from '../types/index.js';
 
 // Get OpenAI client
-async function getOpenAIClient(): Promise<OpenAI> {
-  const apiKey = await Settings.getApiKey();
+async function getOpenAIClient(supabase: SupabaseClient): Promise<OpenAI> {
+  const settings = createSettingsHelper(supabase);
+  const apiKey = await settings.getApiKey();
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
   }
@@ -17,9 +19,10 @@ async function getOpenAIClient(): Promise<OpenAI> {
 
 // Classify whether an email is job-related
 export async function classifyEmail(
+  supabase: SupabaseClient,
   email: GmailMessage
 ): Promise<EmailClassification> {
-  const openai = await getOpenAIClient();
+  const openai = await getOpenAIClient(supabase);
 
   const systemPrompt = `You are an expert at classifying emails. Your task is to determine if an email is related to a job application process.
 
@@ -85,9 +88,10 @@ ${email.body.slice(0, 1500)}`;
 
 // Extract job information from a job-related email
 export async function extractJobInfo(
+  supabase: SupabaseClient,
   email: GmailMessage
 ): Promise<ExtractedJobInfo | null> {
-  const openai = await getOpenAIClient();
+  const openai = await getOpenAIClient(supabase);
 
   const systemPrompt = `You are an expert at extracting job application information from emails.
 
@@ -155,10 +159,11 @@ ${email.body.slice(0, 3000)}`;
 
 // Process a single email: classify and extract info if job-related
 export async function processEmail(
+  supabase: SupabaseClient,
   email: GmailMessage
 ): Promise<{ classification: EmailClassification; jobInfo: ExtractedJobInfo | null }> {
   // First classify the email
-  const classification = await classifyEmail(email);
+  const classification = await classifyEmail(supabase, email);
 
   // If not job-related, skip extraction
   if (!classification.isJobRelated || classification.confidence < 0.6) {
@@ -166,7 +171,7 @@ export async function processEmail(
   }
 
   // Extract job info
-  const jobInfo = await extractJobInfo(email);
+  const jobInfo = await extractJobInfo(supabase, email);
 
   return { classification, jobInfo };
 }

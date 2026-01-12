@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { Settings } from './settings.js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { createSettingsHelper } from './settings.js';
 import {
   getProfile,
   getWorkExperience,
@@ -36,8 +37,9 @@ export interface GenerationResult {
 }
 
 // Get OpenAI client
-async function getOpenAIClient(): Promise<OpenAI> {
-  const apiKey = await Settings.getApiKey();
+async function getOpenAIClient(supabase: SupabaseClient): Promise<OpenAI> {
+  const settings = createSettingsHelper(supabase);
+  const apiKey = await settings.getApiKey();
   if (!apiKey) {
     validationError('OpenAI API key not configured. Please add your API key in Settings.');
   }
@@ -45,13 +47,13 @@ async function getOpenAIClient(): Promise<OpenAI> {
 }
 
 // Build context about the applicant from their profile data
-async function buildApplicantContext(): Promise<string> {
-  const profile = await getProfile();
-  const experience = await getWorkExperience();
-  const education = await getEducation();
-  const skills = await getSkills();
-  const projects = await getProjects();
-  const stories = await getStories();
+async function buildApplicantContext(supabase: SupabaseClient): Promise<string> {
+  const profile = await getProfile(supabase);
+  const experience = await getWorkExperience(supabase);
+  const education = await getEducation(supabase);
+  const skills = await getSkills(supabase);
+  const projects = await getProjects(supabase);
+  const stories = await getStories(supabase);
 
   let context = '## About the Applicant\n\n';
 
@@ -143,8 +145,11 @@ async function buildApplicantContext(): Promise<string> {
 }
 
 // Build context about the job application
-async function buildJobContext(applicationId: number): Promise<string> {
-  const app = await applicationsService.getById(applicationId);
+async function buildJobContext(
+  supabase: SupabaseClient,
+  applicationId: number
+): Promise<string> {
+  const app = await applicationsService.getById(supabase, applicationId);
   if (!app) {
     validationError('Application not found');
   }
@@ -170,12 +175,13 @@ async function buildJobContext(applicationId: number): Promise<string> {
 
 // Generate a cover letter
 export async function generateCoverLetter(
+  supabase: SupabaseClient,
   input: GenerateCoverLetterInput
 ): Promise<GenerationResult> {
-  const openai = await getOpenAIClient();
+  const openai = await getOpenAIClient(supabase);
 
-  const applicantContext = await buildApplicantContext();
-  const jobContext = await buildJobContext(input.applicationId);
+  const applicantContext = await buildApplicantContext(supabase);
+  const jobContext = await buildJobContext(supabase, input.applicationId);
 
   const toneInstructions = {
     professional: 'Use a formal, professional tone suitable for traditional industries.',
@@ -235,12 +241,13 @@ Write the cover letter now. Do not include any explanations or meta-commentary, 
 
 // Generate a response to a custom question
 export async function generateCustomResponse(
+  supabase: SupabaseClient,
   input: GenerateCustomResponseInput
 ): Promise<GenerationResult> {
-  const openai = await getOpenAIClient();
+  const openai = await getOpenAIClient(supabase);
 
-  const applicantContext = await buildApplicantContext();
-  const jobContext = await buildJobContext(input.applicationId);
+  const applicantContext = await buildApplicantContext(supabase);
+  const jobContext = await buildJobContext(supabase, input.applicationId);
 
   const maxLength = input.maxLength || 500;
 
@@ -291,8 +298,11 @@ ${input.additionalContext ? `**Additional context from the applicant:**\n${input
 }
 
 // Refine existing content based on instructions
-export async function refineContent(input: RefineContentInput): Promise<GenerationResult> {
-  const openai = await getOpenAIClient();
+export async function refineContent(
+  supabase: SupabaseClient,
+  input: RefineContentInput
+): Promise<GenerationResult> {
+  const openai = await getOpenAIClient(supabase);
 
   const systemPrompt = `You are an expert editor helping refine job application content.
 
@@ -335,12 +345,13 @@ Write the refined content now. Do not include any explanations or meta-commentar
 }
 
 // Check if AI is configured
-export async function isAiConfigured(): Promise<boolean> {
-  const apiKey = await Settings.getApiKey();
+export async function isAiConfigured(supabase: SupabaseClient): Promise<boolean> {
+  const settings = createSettingsHelper(supabase);
+  const apiKey = await settings.getApiKey();
   return !!apiKey;
 }
 
 // Get the applicant context (for viewing in UI)
-export async function getApplicantContext(): Promise<string> {
-  return buildApplicantContext();
+export async function getApplicantContext(supabase: SupabaseClient): Promise<string> {
+  return buildApplicantContext(supabase);
 }

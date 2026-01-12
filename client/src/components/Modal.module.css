@@ -188,6 +188,14 @@
   flex-shrink: 0;
 }
 
+/* Confirmation message styling - use in delete/confirm modals */
+.confirmMessage {
+  font-size: var(--text-sm);
+  color: var(--color-ink-light);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .overlay {

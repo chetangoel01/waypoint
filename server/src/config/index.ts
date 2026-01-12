@@ -17,6 +17,10 @@ export const config = {
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
 
+  // Security - encryption key for sensitive data (API keys)
+  // Should be a random string, at least 32 characters
+  encryptionKey: process.env.ENCRYPTION_KEY || '',
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
 
@@ -49,7 +53,11 @@ export function validateEnv(): void {
 
   // Optional warnings
   if (!process.env.OPENAI_API_KEY) {
-    warnings.push('OPENAI_API_KEY not set - AI features will not work');
+    warnings.push('OPENAI_API_KEY not set - users will need to provide their own API key');
+  }
+  
+  if (!process.env.ENCRYPTION_KEY) {
+    warnings.push('ENCRYPTION_KEY not set - API keys will be stored without encryption');
   }
 
   if (config.isProduction) {

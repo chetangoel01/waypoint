@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useEmailStatus,
-  useSaveEmailCredentials,
   useGetAuthUrl,
   useDisconnectEmail,
 } from '../hooks';
@@ -19,13 +18,8 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: emailStatus, isLoading, refetch } = useEmailStatus();
-  const saveCredentials = useSaveEmailCredentials();
   const getAuthUrl = useGetAuthUrl();
   const disconnectEmail = useDisconnectEmail();
-
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
 
   // Sync progress state
   const [isSyncing, setIsSyncing] = useState(false);
@@ -51,27 +45,6 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams, onToast, refetch]);
-
-  const handleSaveCredentials = async () => {
-    if (!clientId.trim() || !clientSecret.trim()) return;
-
-    try {
-      await saveCredentials.mutateAsync({
-        clientId: clientId.trim(),
-        clientSecret: clientSecret.trim(),
-      });
-      setClientId('');
-      setClientSecret('');
-      setShowCredentialsForm(false);
-      onToast({ type: 'success', message: 'Gmail credentials saved!' });
-      refetch();
-    } catch (err) {
-      onToast({
-        type: 'error',
-        message: err instanceof Error ? err.message : 'Failed to save credentials',
-      });
-    }
-  };
 
   const handleConnect = async () => {
     try {
@@ -189,7 +162,7 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
             </span>
           ) : emailStatus?.hasCredentials ? (
             <span className={`${styles.statusBadge} ${styles.statusInterview}`}>
-              Credentials saved - Click Connect to authorize
+              Ready to connect - Click Connect to authorize
             </span>
           ) : (
             <span
@@ -199,7 +172,7 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
                 color: 'var(--color-ink-muted)',
               }}
             >
-              Not configured
+              Not configured - Admin must set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET
             </span>
           )}
         </div>
@@ -295,14 +268,9 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
               {isSyncing ? 'Syncing...' : 'Sync Now'}
             </button>
             <button
+              className={`${styles.buttonLink} ${styles.buttonLinkDanger}`}
               onClick={handleDisconnect}
               disabled={disconnectEmail.isPending || isSyncing}
-              style={{
-                fontSize: 'var(--text-sm)',
-                color: 'var(--color-rose)',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px',
-              }}
             >
               {disconnectEmail.isPending ? 'Disconnecting...' : 'Disconnect Gmail'}
             </button>
@@ -310,7 +278,7 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
         </>
       )}
 
-      {/* Has credentials but not connected */}
+      {/* Has credentials (from env vars) but not connected */}
       {!emailStatus?.connected && emailStatus?.hasCredentials && (
         <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
           <button
@@ -320,130 +288,23 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
           >
             {getAuthUrl.isPending ? 'Connecting...' : 'Connect Gmail'}
           </button>
-          <button
-            className={`${styles.button} ${styles.buttonSecondary}`}
-            onClick={() => setShowCredentialsForm(true)}
-          >
-            Update Credentials
-          </button>
         </div>
       )}
 
-      {/* No credentials - show setup instructions or form */}
-      {!emailStatus?.connected && !emailStatus?.hasCredentials && !showCredentialsForm && (
-        <div className={styles.formGroup}>
-          <button
-            className={`${styles.button} ${styles.buttonPrimary}`}
-            onClick={() => setShowCredentialsForm(true)}
-          >
-            Set Up Gmail Integration
-          </button>
-        </div>
-      )}
-
-      {/* Credentials form */}
-      {showCredentialsForm && !emailStatus?.connected && (
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-subtle)',
-              padding: 'var(--space-4)',
-              borderRadius: 'var(--radius-lg)',
-              marginBottom: 'var(--space-4)',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Setup Instructions
-            </h3>
-            <ol
-              style={{
-                fontSize: 'var(--text-sm)',
-                color: 'var(--color-ink-muted)',
-                paddingLeft: 'var(--space-4)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--space-1)',
-              }}
-            >
-              <li>
-                Go to{' '}
-                <a
-                  href="https://console.cloud.google.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.sectionLink}
-                >
-                  Google Cloud Console <Icons.ExternalLink />
-                </a>
-              </li>
-              <li>Create a new project or select an existing one</li>
-              <li>Enable the Gmail API (APIs & Services → Library → Gmail API)</li>
-              <li>Configure OAuth consent screen (External, add gmail.readonly scope)</li>
-              <li>Create OAuth credentials (Web application)</li>
-              <li>
-                Add redirect URI:{' '}
-                <code
-                  style={{
-                    backgroundColor: 'var(--color-bg)',
-                    padding: '2px 6px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: 'var(--text-xs)',
-                  }}
-                >
-                  http://localhost:3001/api/email/callback
-                </code>
-              </li>
-              <li>Copy your Client ID and Client Secret below</li>
-            </ol>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Client ID</label>
-            <input
-              type="text"
-              placeholder="Your Google OAuth Client ID"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              style={{ maxWidth: '500px' }}
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Client Secret</label>
-            <input
-              type="password"
-              placeholder="Your Google OAuth Client Secret"
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-              style={{ maxWidth: '500px' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-            <button
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={handleSaveCredentials}
-              disabled={!clientId.trim() || !clientSecret.trim() || saveCredentials.isPending}
-            >
-              {saveCredentials.isPending ? 'Saving...' : 'Save Credentials'}
-            </button>
-            <button
-              className={`${styles.button} ${styles.buttonSecondary}`}
-              onClick={() => {
-                setShowCredentialsForm(false);
-                setClientId('');
-                setClientSecret('');
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+      {/* No credentials configured */}
+      {!emailStatus?.connected && !emailStatus?.hasCredentials && (
+        <div
+          style={{
+            backgroundColor: 'var(--color-bg-subtle)',
+            padding: 'var(--space-4)',
+            borderRadius: 'var(--radius-lg)',
+            marginTop: 'var(--space-4)',
+          }}
+        >
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
+            Gmail integration requires the server administrator to configure OAuth credentials.
+            Contact your administrator to set up <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> environment variables.
+          </p>
         </div>
       )}
     </section>

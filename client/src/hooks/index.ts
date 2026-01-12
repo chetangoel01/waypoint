@@ -82,7 +82,6 @@ export {
 // Email integration hooks
 export {
   useEmailStatus,
-  useSaveEmailCredentials,
   useGetAuthUrl,
   useEmailSync,
   useDisconnectEmail,
