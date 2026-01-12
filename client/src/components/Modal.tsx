@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Icons } from './Icons';
 import styles from './Modal.module.css';
 
@@ -45,7 +46,7 @@ export function Modal({ isOpen, onClose, title, size = 'md', children }: ModalPr
   };
   const sizeClass = sizeClasses[size] || styles.modalMd;
 
-  return (
+  const modalContent = (
     <div className={styles.overlay} ref={overlayRef} onClick={handleOverlayClick}>
       <div className={`${styles.modal} ${sizeClass}`}>
         <div className={styles.header}>
@@ -60,6 +61,9 @@ export function Modal({ isOpen, onClose, title, size = 'md', children }: ModalPr
       </div>
     </div>
   );
+
+  // Portal to document body so modal covers everything
+  return createPortal(modalContent, document.body);
 }
 
 interface ModalActionsProps {

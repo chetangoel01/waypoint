@@ -1,32 +1,69 @@
-/* Modal overlay */
+/* Modal overlay - covers entire viewport */
 .overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(45, 42, 38, 0.25);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
   padding: var(--space-4);
-  animation: fadeIn 0.2s var(--ease-out);
+  animation: overlayIn 0.3s var(--ease-out);
+  overflow-y: auto;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Modal container */
 .modal {
   background: var(--surface-card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 24px 64px rgba(45, 42, 38, 0.15),
+    0 12px 24px rgba(45, 42, 38, 0.08),
+    0 4px 8px rgba(45, 42, 38, 0.04);
   width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
+  max-height: calc(100vh - var(--space-8));
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s var(--ease-out);
+  animation: modalIn 0.35s var(--ease-out);
+  position: relative;
+  margin: auto;
+  overflow: hidden;
+}
+
+/* Warm accent line at top */
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--color-terracotta) 0%,
+    var(--color-terracotta-light) 50%,
+    var(--color-terracotta) 100%
+  );
+  opacity: 0.9;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  z-index: 1;
 }
 
 .modalSm {
@@ -38,7 +75,7 @@
 }
 
 .modalLg {
-  max-width: 600px;
+  max-width: 640px;
 }
 
 .modalXl {
@@ -47,27 +84,31 @@
 
 .modalFull {
   max-width: 1000px;
-  height: 85vh;
+  height: calc(100vh - var(--space-8));
 }
 
-@keyframes slideUp {
+@keyframes modalIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Header */
+/* Header - fixed at top */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-5) var(--space-6);
+  padding-top: calc(var(--space-5) + 3px);
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  flex-shrink: 0;
 }
 
 .title {
@@ -76,17 +117,22 @@
   font-weight: 600;
   color: var(--color-ink);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .closeButton {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
 }
 
 .closeButton:hover {
@@ -94,23 +140,94 @@
   color: var(--color-ink);
 }
 
+.closeButton:active {
+  transform: scale(0.95);
+}
+
 .closeButton svg {
   width: 20px;
   height: 20px;
 }
 
-/* Body */
+/* Body - scrollable */
 .body {
   padding: var(--space-6);
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Actions footer */
+/* Custom scrollbar for modal body */
+.body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.body::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+
+.body::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Actions footer - fixed at bottom */
 .actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding-top: var(--space-5);
-  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-card);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 90vh;
+    animation: modalInMobile 0.35s var(--ease-out);
+  }
+
+  .modal::before {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  @keyframes modalInMobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .header {
+    padding: var(--space-4) var(--space-5);
+    padding-top: calc(var(--space-4) + 3px);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .body {
+    padding: var(--space-5);
+  }
+
+  .actions {
+    padding: var(--space-4) var(--space-5);
+    border-radius: 0;
+  }
 }
