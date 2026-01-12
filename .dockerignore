@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+*/node_modules
+
+# Build outputs (will be built in container)
+client/dist
+server/dist
+electron/dist
+
+# Development files
+.git
+.gitignore
+*.md
+.env
+.env.local
+
+# Electron (not needed for web deployment)
+electron
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Data (will be mounted as volume)
+data
+*.db

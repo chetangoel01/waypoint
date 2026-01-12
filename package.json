@@ -17,9 +17,13 @@
     "build:server": "npm run build --workspace=server",
     "build:client": "npm run build --workspace=client",
     "build:electron": "npm run build --workspace=electron",
+    "build:prod": "NODE_ENV=production npm run build",
+    "start": "node server/dist/index.js",
+    "start:prod": "NODE_ENV=production node server/dist/index.js",
     "package": "npm run package --workspace=electron",
     "db:init": "npm run db:init --workspace=server",
     "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf node_modules client/node_modules server/node_modules electron/node_modules client/dist server/dist electron/dist"
   },
   "devDependencies": {

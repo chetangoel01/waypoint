@@ -3,6 +3,7 @@ import { success, asyncHandler, validationError } from '../middleware/response.j
 import { Settings } from '../services/settings.js';
 import * as gmailOAuth from '../services/gmail-oauth.js';
 import * as emailSync from '../services/email-sync.js';
+import config from '../config/index.js';
 import type { EmailStatus } from '../types/index.js';
 
 const router = Router();
@@ -62,25 +63,25 @@ router.get(
     if (error) {
       // Redirect to settings page with error
       return res.redirect(
-        `http://localhost:5173/settings?email_error=${encodeURIComponent(String(error))}`
+        `${config.clientUrl}/settings?email_error=${encodeURIComponent(String(error))}`
       );
     }
 
     if (!code || typeof code !== 'string') {
       return res.redirect(
-        'http://localhost:5173/settings?email_error=No authorization code received'
+        `${config.clientUrl}/settings?email_error=No authorization code received`
       );
     }
 
     try {
       await gmailOAuth.exchangeCode(code);
       // Redirect to settings page with success
-      res.redirect('http://localhost:5173/settings?email_connected=true');
+      res.redirect(`${config.clientUrl}/settings?email_connected=true`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to connect Gmail';
       res.redirect(
-        `http://localhost:5173/settings?email_error=${encodeURIComponent(message)}`
+        `${config.clientUrl}/settings?email_error=${encodeURIComponent(message)}`
       );
     }
   })

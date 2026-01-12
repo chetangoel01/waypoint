@@ -1,8 +1,9 @@
 import { google } from 'googleapis';
 import { Settings } from './settings.js';
+import config from '../config/index.js';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
-const REDIRECT_URI = 'http://localhost:3001/api/email/callback';
+const REDIRECT_URI = `${config.serverUrl}/api/email/callback`;
 
 // Create OAuth2 client with stored credentials
 function getOAuth2Client() {

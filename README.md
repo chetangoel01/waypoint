@@ -76,14 +76,25 @@ The app will be available at:
 
 ### Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (see `.env.example`):
 
 ```env
-# OpenAI API Key (optional - can also be set in Settings)
+# Application environment (development | production)
+NODE_ENV=development
+
+# Server configuration
+PORT=3001
+SERVER_URL=http://localhost:3001
+CLIENT_URL=http://localhost:5173
+
+# Database path
+DATABASE_PATH=./data/app.db
+
+# OpenAI API Key (can also be set in Settings)
 OPENAI_API_KEY=sk-your-key-here
 
-# Database path (optional - defaults to ./server/data/app.db)
-DATABASE_PATH=./server/data/app.db
+# Logging level (debug | info | warn | error)
+LOG_LEVEL=info
 ```
 
 ### Gmail Integration Setup
@@ -160,8 +171,49 @@ npm run dev          # Start both client and server in development
 npm run dev:client   # Start only the frontend
 npm run dev:server   # Start only the backend
 npm run build        # Build all packages
+npm run build:prod   # Build for production
+npm run start:prod   # Start production server
 npm run db:init      # Initialize/migrate database
 ```
+
+## Production Deployment
+
+### Docker (Recommended)
+
+The easiest way to deploy Waypoint is with Docker:
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Or build manually
+docker build -t waypoint .
+docker run -d -p 3001:3001 -v ./data:/app/data -e OPENAI_API_KEY=sk-your-key waypoint
+```
+
+### Manual Deployment
+
+```bash
+# Install dependencies
+npm ci
+
+# Build for production
+npm run build:prod
+
+# Initialize database (first time only)
+npm run db:init
+
+# Start production server
+npm run start:prod
+```
+
+### Security Considerations
+
+- Never commit `.env` files to version control
+- Use strong, unique API keys in production
+- Configure `CLIENT_URL` and `SERVER_URL` for your domain
+- Rate limiting is enabled by default (100 req/15min, 10 AI req/min)
+- Security headers are added via Helmet middleware
 
 ## Design System
 

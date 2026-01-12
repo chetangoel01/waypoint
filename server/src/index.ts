@@ -7,9 +7,51 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 import app from './app.js';
+import config, { validateEnv } from './config/index.js';
+import logger from './utils/logger.js';
+import db from './db/index.js';
 
-const PORT = process.env.PORT || 3001;
+// Validate environment on startup
+validateEnv();
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const server = app.listen(config.port, () => {
+  logger.info(`Server running on http://localhost:${config.port}`);
+  logger.info(`Environment: ${config.nodeEnv}`);
+});
+
+// Graceful shutdown
+const shutdown = (signal: string) => {
+  logger.info(`${signal} received, shutting down gracefully...`);
+
+  server.close(() => {
+    logger.info('HTTP server closed');
+
+    try {
+      db.close();
+      logger.info('Database connection closed');
+    } catch (err) {
+      logger.error({ err }, 'Error closing database');
+    }
+
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    logger.error('Could not close connections in time, forcing shutdown');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'Uncaught exception');
+  shutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'Unhandled rejection');
 });

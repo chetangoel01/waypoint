@@ -10,6 +10,33 @@ let serverProcess: ChildProcess | null = null;
 
 const SERVER_PORT = 3001;
 const CLIENT_PORT = 5173;
+const HEALTH_CHECK_URL = `http://localhost:${SERVER_PORT}/api/health`;
+
+// Get database path based on environment
+function getDatabasePath(): string {
+  if (isDev) {
+    return path.join(__dirname, '../../server/data/app.db');
+  }
+  // In production, use user data folder
+  return path.join(app.getPath('userData'), 'app.db');
+}
+
+// Health check with retry
+async function waitForServer(maxRetries = 30, delay = 500): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(HEALTH_CHECK_URL);
+      if (response.ok) {
+        console.log('Server is ready');
+        return true;
+      }
+    } catch {
+      // Server not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+  return false;
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -63,20 +90,24 @@ function startServer(): Promise<void> {
 
     // In production, spawn the server
     const serverPath = path.join(process.resourcesPath, 'server');
+    const dbPath = getDatabasePath();
+
+    console.log(`Starting server with database at: ${dbPath}`);
+
     serverProcess = spawn('node', ['index.js'], {
       cwd: serverPath,
       env: {
         ...process.env,
         PORT: SERVER_PORT.toString(),
         NODE_ENV: 'production',
+        DATABASE_PATH: dbPath,
+        CLIENT_URL: `file://${path.join(__dirname, '../../client/dist')}`,
+        SERVER_URL: `http://localhost:${SERVER_PORT}`,
       },
     });
 
     serverProcess.stdout?.on('data', (data) => {
       console.log(`Server: ${data}`);
-      if (data.toString().includes('Server running')) {
-        resolve();
-      }
     });
 
     serverProcess.stderr?.on('data', (data) => {
@@ -88,8 +119,16 @@ function startServer(): Promise<void> {
       reject(error);
     });
 
-    // Resolve after a short delay if no "Server running" message
-    setTimeout(resolve, 2000);
+    // Wait for server to be ready via health check
+    waitForServer()
+      .then((ready) => {
+        if (ready) {
+          resolve();
+        } else {
+          reject(new Error('Server failed to start within timeout'));
+        }
+      })
+      .catch(reject);
   });
 }
 
