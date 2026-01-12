@@ -33,15 +33,15 @@ RUN npm ci --workspace=server --omit=dev
 # Copy built files
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist
-COPY server/src/db/schema.sql ./server/src/db/
-
-# Create data directory
-RUN mkdir -p /app/data
+COPY server/src/db/*.sql ./server/src/db/
 
 # Set environment
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV DATABASE_PATH=/app/data/app.db
+
+# Supabase placeholders (should be provided at runtime)
+ENV SUPABASE_URL=""
+ENV SUPABASE_SERVICE_KEY=""
 
 # Expose port
 EXPOSE 3001

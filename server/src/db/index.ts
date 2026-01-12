@@ -1,33 +1,25 @@
-import Database, { Database as DatabaseType } from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Get Supabase credentials from environment
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-// Get database path from environment or use default
-const dbPath = process.env.DATABASE_PATH || './data/app.db';
-const absoluteDbPath = path.isAbsolute(dbPath)
-  ? dbPath
-  : path.resolve(__dirname, '../../', dbPath);
-
-// Ensure data directory exists
-const dbDir = path.dirname(absoluteDbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.');
+  process.exit(1);
 }
 
-// Create database connection
-const db: DatabaseType = new Database(absoluteDbPath);
+// Create Supabase client
+const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
-
-// Enable WAL mode for better concurrent performance
-db.pragma('journal_mode = WAL');
-
-export default db;
+export default supabase;
 
 export function closeDatabase(): void {
-  db.close();
+  // Supabase client doesn't need explicit closing
+  // This is kept for backwards compatibility
 }

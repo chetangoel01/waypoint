@@ -13,10 +13,10 @@ router.get(
   '/status',
   asyncHandler(async (_req, res) => {
     const status: EmailStatus = {
-      connected: gmailOAuth.isConnected(),
-      email: Settings.getGmailUserEmail() || undefined,
-      lastSync: Settings.getLastSyncDate() || undefined,
-      hasCredentials: gmailOAuth.hasCredentials(),
+      connected: await gmailOAuth.isConnected(),
+      email: (await Settings.getGmailUserEmail()) || undefined,
+      lastSync: (await Settings.getLastSyncDate()) || undefined,
+      hasCredentials: await gmailOAuth.hasCredentials(),
     };
 
     res.json(success(status));
@@ -33,7 +33,7 @@ router.put(
       return validationError('Client ID and Client Secret are required');
     }
 
-    Settings.setGmailCredentials(clientId, clientSecret);
+    await Settings.setGmailCredentials(clientId, clientSecret);
 
     res.json(success({ message: 'Credentials saved' }));
   })
@@ -43,13 +43,13 @@ router.put(
 router.get(
   '/auth-url',
   asyncHandler(async (_req, res) => {
-    if (!gmailOAuth.hasCredentials()) {
+    if (!(await gmailOAuth.hasCredentials())) {
       return validationError(
         'Gmail credentials not configured. Please add Client ID and Client Secret first.'
       );
     }
 
-    const url = gmailOAuth.getAuthUrl();
+    const url = await gmailOAuth.getAuthUrl();
     res.json(success({ url }));
   })
 );
@@ -78,8 +78,7 @@ router.get(
       // Redirect to settings page with success
       res.redirect(`${config.clientUrl}/settings?email_connected=true`);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to connect Gmail';
+      const message = err instanceof Error ? err.message : 'Failed to connect Gmail';
       res.redirect(
         `${config.clientUrl}/settings?email_error=${encodeURIComponent(message)}`
       );
@@ -91,7 +90,7 @@ router.get(
 router.post(
   '/sync',
   asyncHandler(async (_req, res) => {
-    if (!gmailOAuth.isConnected()) {
+    if (!(await gmailOAuth.isConnected())) {
       return validationError('Gmail not connected');
     }
 
@@ -102,7 +101,7 @@ router.post(
 
 // GET /api/email/sync-stream - Trigger email sync with SSE progress
 router.get('/sync-stream', async (req, res) => {
-  if (!gmailOAuth.isConnected()) {
+  if (!(await gmailOAuth.isConnected())) {
     res.status(400).json({ success: false, error: 'Gmail not connected' });
     return;
   }
@@ -138,7 +137,7 @@ router.get('/sync-stream', async (req, res) => {
 router.delete(
   '/disconnect',
   asyncHandler(async (_req, res) => {
-    gmailOAuth.disconnect();
+    await gmailOAuth.disconnect();
     res.json(success({ message: 'Gmail disconnected' }));
   })
 );
@@ -148,7 +147,7 @@ router.get(
   '/history',
   asyncHandler(async (req, res) => {
     const limit = parseInt(String(req.query.limit)) || 50;
-    const history = emailSync.getProcessedEmails(limit);
+    const history = await emailSync.getProcessedEmails(limit);
     res.json(success(history));
   })
 );

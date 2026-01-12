@@ -2,14 +2,15 @@ import dotenv from 'dotenv';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-// Load .env from project root (parent of server/)
+// Load .env from project root (parent of server/) - MUST be before other imports
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
-import app from './app.js';
-import config, { validateEnv } from './config/index.js';
-import logger from './utils/logger.js';
-import db from './db/index.js';
+// Dynamic imports to ensure env vars are loaded first
+const { default: app } = await import('./app.js');
+const { default: config, validateEnv } = await import('./config/index.js');
+const { default: logger } = await import('./utils/logger.js');
+const { closeDatabase } = await import('./db/index.js');
 
 // Validate environment on startup
 validateEnv();
@@ -27,7 +28,7 @@ const shutdown = (signal: string) => {
     logger.info('HTTP server closed');
 
     try {
-      db.close();
+      closeDatabase();
       logger.info('Database connection closed');
     } catch (err) {
       logger.error({ err }, 'Error closing database');

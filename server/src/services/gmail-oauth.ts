@@ -6,8 +6,8 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 const REDIRECT_URI = `${config.serverUrl}/api/email/callback`;
 
 // Create OAuth2 client with stored credentials
-function getOAuth2Client() {
-  const credentials = Settings.getGmailCredentials();
+async function getOAuth2Client() {
+  const credentials = await Settings.getGmailCredentials();
   if (!credentials) {
     throw new Error('Gmail credentials not configured');
   }
@@ -20,8 +20,8 @@ function getOAuth2Client() {
 }
 
 // Generate the OAuth URL for user authorization
-export function getAuthUrl(): string {
-  const oauth2Client = getOAuth2Client();
+export async function getAuthUrl(): Promise<string> {
+  const oauth2Client = await getOAuth2Client();
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -32,7 +32,7 @@ export function getAuthUrl(): string {
 
 // Exchange authorization code for tokens
 export async function exchangeCode(code: string): Promise<void> {
-  const oauth2Client = getOAuth2Client();
+  const oauth2Client = await getOAuth2Client();
 
   const { tokens } = await oauth2Client.getToken(code);
 
@@ -41,7 +41,7 @@ export async function exchangeCode(code: string): Promise<void> {
   }
 
   // Save tokens
-  Settings.setGmailTokens(
+  await Settings.setGmailTokens(
     tokens.access_token,
     tokens.refresh_token,
     tokens.expiry_date || Date.now() + 3600 * 1000
@@ -53,18 +53,18 @@ export async function exchangeCode(code: string): Promise<void> {
   const profile = await gmail.users.getProfile({ userId: 'me' });
 
   if (profile.data.emailAddress) {
-    Settings.setGmailUserEmail(profile.data.emailAddress);
+    await Settings.setGmailUserEmail(profile.data.emailAddress);
   }
 }
 
 // Refresh access token if expired
 export async function refreshAccessToken(): Promise<string> {
-  const tokens = Settings.getGmailTokens();
+  const tokens = await Settings.getGmailTokens();
   if (!tokens) {
     throw new Error('No Gmail tokens stored');
   }
 
-  const oauth2Client = getOAuth2Client();
+  const oauth2Client = await getOAuth2Client();
   oauth2Client.setCredentials({
     refresh_token: tokens.refreshToken,
   });
@@ -76,7 +76,7 @@ export async function refreshAccessToken(): Promise<string> {
   }
 
   // Update stored tokens
-  Settings.setGmailTokens(
+  await Settings.setGmailTokens(
     credentials.access_token,
     tokens.refreshToken, // Keep the same refresh token
     credentials.expiry_date || Date.now() + 3600 * 1000
@@ -87,7 +87,7 @@ export async function refreshAccessToken(): Promise<string> {
 
 // Get valid access token (refreshes if expired)
 export async function getValidAccessToken(): Promise<string> {
-  const tokens = Settings.getGmailTokens();
+  const tokens = await Settings.getGmailTokens();
   if (!tokens) {
     throw new Error('Gmail not connected');
   }
@@ -104,24 +104,25 @@ export async function getValidAccessToken(): Promise<string> {
 }
 
 // Check if Gmail is connected
-export function isConnected(): boolean {
+export async function isConnected(): Promise<boolean> {
   return Settings.isGmailConnected();
 }
 
 // Check if Gmail credentials are configured
-export function hasCredentials(): boolean {
-  return Settings.getGmailCredentials() !== null;
+export async function hasCredentials(): Promise<boolean> {
+  const credentials = await Settings.getGmailCredentials();
+  return credentials !== null;
 }
 
 // Disconnect Gmail
-export function disconnect(): void {
-  Settings.clearGmailConnection();
+export async function disconnect(): Promise<void> {
+  await Settings.clearGmailConnection();
 }
 
 // Get authenticated Gmail client
 export async function getGmailClient() {
   const accessToken = await getValidAccessToken();
-  const credentials = Settings.getGmailCredentials();
+  const credentials = await Settings.getGmailCredentials();
 
   if (!credentials) {
     throw new Error('Gmail credentials not configured');

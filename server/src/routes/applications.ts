@@ -12,7 +12,7 @@ router.get(
       status: req.query.status as string | undefined,
       company: req.query.company as string | undefined,
     };
-    const applications = applicationsService.getAll(filters);
+    const applications = await applicationsService.getAll(filters);
     res.json(success(applications));
   })
 );
@@ -22,7 +22,7 @@ router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const application = applicationsService.getById(id);
+    const application = await applicationsService.getById(id);
     if (!application) {
       notFound('Application');
     }
@@ -34,7 +34,7 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const application = applicationsService.create(req.body);
+    const application = await applicationsService.create(req.body);
     res.status(201).json(success(application));
   })
 );
@@ -44,7 +44,7 @@ router.put(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const application = applicationsService.update(id, req.body);
+    const application = await applicationsService.update(id, req.body);
     res.json(success(application));
   })
 );
@@ -54,7 +54,7 @@ router.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    applicationsService.remove(id);
+    await applicationsService.remove(id);
     res.json(success({ deleted: true }));
   })
 );
@@ -65,7 +65,7 @@ router.patch(
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
     const { status } = req.body;
-    const application = applicationsService.updateStatus(id, status);
+    const application = await applicationsService.updateStatus(id, status);
     res.json(success(application));
   })
 );

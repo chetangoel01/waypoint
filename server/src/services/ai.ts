@@ -1,11 +1,13 @@
 import OpenAI from 'openai';
 import { Settings } from './settings.js';
-import { getProfile } from './profile.js';
-import * as experienceService from './experience.js';
-import * as educationService from './education.js';
-import { getAllGrouped as getSkillsGrouped } from './skills.js';
-import * as projectsService from './projects.js';
-import * as storiesService from './stories.js';
+import {
+  getProfile,
+  getWorkExperience,
+  getEducation,
+  getSkills,
+  getProjects,
+  getStories,
+} from './profile.js';
 import * as applicationsService from './applications.js';
 import { validationError } from '../middleware/response.js';
 
@@ -34,8 +36,8 @@ export interface GenerationResult {
 }
 
 // Get OpenAI client
-function getOpenAIClient(): OpenAI {
-  const apiKey = Settings.getApiKey();
+async function getOpenAIClient(): Promise<OpenAI> {
+  const apiKey = await Settings.getApiKey();
   if (!apiKey) {
     validationError('OpenAI API key not configured. Please add your API key in Settings.');
   }
@@ -44,12 +46,12 @@ function getOpenAIClient(): OpenAI {
 
 // Build context about the applicant from their profile data
 async function buildApplicantContext(): Promise<string> {
-  const profile = getProfile();
-  const experience = experienceService.getAll();
-  const education = educationService.getAll();
-  const skills = getSkillsGrouped();
-  const projects = projectsService.getAll();
-  const stories = storiesService.getAll();
+  const profile = await getProfile();
+  const experience = await getWorkExperience();
+  const education = await getEducation();
+  const skills = await getSkills();
+  const projects = await getProjects();
+  const stories = await getStories();
 
   let context = '## About the Applicant\n\n';
 
@@ -58,7 +60,8 @@ async function buildApplicantContext(): Promise<string> {
     if (profile.location) context += `**Location:** ${profile.location}\n`;
     if (profile.career_goals) context += `**Career Goals:** ${profile.career_goals}\n`;
     if (profile.preferences) context += `**Preferences:** ${profile.preferences}\n`;
-    if (profile.additional_context) context += `**Additional Context:** ${profile.additional_context}\n`;
+    if (profile.additional_context)
+      context += `**Additional Context:** ${profile.additional_context}\n`;
     context += '\n';
 
     // Include resume text if available
@@ -77,8 +80,8 @@ async function buildApplicantContext(): Promise<string> {
       }
       context += '\n';
       if (exp.description) context += `  ${exp.description}\n`;
-      if (exp.achievements?.length) {
-        context += `  Achievements: ${exp.achievements.join('; ')}\n`;
+      if (exp.achievements) {
+        context += `  Achievements: ${exp.achievements}\n`;
       }
     });
     context += '\n';
@@ -95,11 +98,18 @@ async function buildApplicantContext(): Promise<string> {
     context += '\n';
   }
 
-  if (Object.keys(skills).length > 0) {
+  if (skills.length > 0) {
     context += '### Skills\n';
-    for (const [category, categorySkills] of Object.entries(skills)) {
-      const skillNames = categorySkills.map((s) => s.name).join(', ');
-      context += `- **${category}:** ${skillNames}\n`;
+    // Group skills by category
+    const grouped: Record<string, string[]> = {};
+    skills.forEach((skill) => {
+      if (!grouped[skill.category]) {
+        grouped[skill.category] = [];
+      }
+      grouped[skill.category].push(skill.name);
+    });
+    for (const [category, names] of Object.entries(grouped)) {
+      context += `- **${category}:** ${names.join(', ')}\n`;
     }
     context += '\n';
   }
@@ -108,7 +118,7 @@ async function buildApplicantContext(): Promise<string> {
     context += '### Notable Projects\n';
     projects.forEach((proj) => {
       context += `- **${proj.name}**`;
-      if (proj.technologies?.length) context += ` (${proj.technologies.join(', ')})`;
+      if (proj.technologies) context += ` (${proj.technologies})`;
       context += '\n';
       if (proj.description) context += `  ${proj.description}\n`;
       if (proj.outcomes) context += `  Outcomes: ${proj.outcomes}\n`;
@@ -120,7 +130,7 @@ async function buildApplicantContext(): Promise<string> {
     context += '### Relevant Stories (STAR format experiences)\n';
     stories.slice(0, 3).forEach((story) => {
       context += `- **${story.title}**`;
-      if (story.tags?.length) context += ` [${story.tags.join(', ')}]`;
+      if (story.tags) context += ` [${story.tags}]`;
       context += '\n';
       if (story.situation) context += `  Situation: ${story.situation}\n`;
       if (story.action) context += `  Action: ${story.action}\n`;
@@ -133,8 +143,8 @@ async function buildApplicantContext(): Promise<string> {
 }
 
 // Build context about the job application
-function buildJobContext(applicationId: number): string {
-  const app = applicationsService.getById(applicationId);
+async function buildJobContext(applicationId: number): Promise<string> {
+  const app = await applicationsService.getById(applicationId);
   if (!app) {
     validationError('Application not found');
   }
@@ -159,11 +169,13 @@ function buildJobContext(applicationId: number): string {
 }
 
 // Generate a cover letter
-export async function generateCoverLetter(input: GenerateCoverLetterInput): Promise<GenerationResult> {
-  const openai = getOpenAIClient();
+export async function generateCoverLetter(
+  input: GenerateCoverLetterInput
+): Promise<GenerationResult> {
+  const openai = await getOpenAIClient();
 
   const applicantContext = await buildApplicantContext();
-  const jobContext = buildJobContext(input.applicationId);
+  const jobContext = await buildJobContext(input.applicationId);
 
   const toneInstructions = {
     professional: 'Use a formal, professional tone suitable for traditional industries.',
@@ -222,11 +234,13 @@ Write the cover letter now. Do not include any explanations or meta-commentary, 
 }
 
 // Generate a response to a custom question
-export async function generateCustomResponse(input: GenerateCustomResponseInput): Promise<GenerationResult> {
-  const openai = getOpenAIClient();
+export async function generateCustomResponse(
+  input: GenerateCustomResponseInput
+): Promise<GenerationResult> {
+  const openai = await getOpenAIClient();
 
   const applicantContext = await buildApplicantContext();
-  const jobContext = buildJobContext(input.applicationId);
+  const jobContext = await buildJobContext(input.applicationId);
 
   const maxLength = input.maxLength || 500;
 
@@ -278,7 +292,7 @@ ${input.additionalContext ? `**Additional context from the applicant:**\n${input
 
 // Refine existing content based on instructions
 export async function refineContent(input: RefineContentInput): Promise<GenerationResult> {
-  const openai = getOpenAIClient();
+  const openai = await getOpenAIClient();
 
   const systemPrompt = `You are an expert editor helping refine job application content.
 
@@ -321,8 +335,9 @@ Write the refined content now. Do not include any explanations or meta-commentar
 }
 
 // Check if AI is configured
-export function isAiConfigured(): boolean {
-  return !!Settings.getApiKey();
+export async function isAiConfigured(): Promise<boolean> {
+  const apiKey = await Settings.getApiKey();
+  return !!apiKey;
 }
 
 // Get the applicant context (for viewing in UI)

@@ -7,8 +7,8 @@ import type {
 } from '../types/index.js';
 
 // Get OpenAI client
-function getOpenAIClient(): OpenAI {
-  const apiKey = Settings.getApiKey();
+async function getOpenAIClient(): Promise<OpenAI> {
+  const apiKey = await Settings.getApiKey();
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
   }
@@ -19,7 +19,7 @@ function getOpenAIClient(): OpenAI {
 export async function classifyEmail(
   email: GmailMessage
 ): Promise<EmailClassification> {
-  const openai = getOpenAIClient();
+  const openai = await getOpenAIClient();
 
   const systemPrompt = `You are an expert at classifying emails. Your task is to determine if an email is related to a job application process.
 
@@ -87,7 +87,7 @@ ${email.body.slice(0, 1500)}`;
 export async function extractJobInfo(
   email: GmailMessage
 ): Promise<ExtractedJobInfo | null> {
-  const openai = getOpenAIClient();
+  const openai = await getOpenAIClient();
 
   const systemPrompt = `You are an expert at extracting job application information from emails.
 

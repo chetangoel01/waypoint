@@ -13,8 +13,9 @@ export const config = {
   // Client
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
 
-  // Database
-  databasePath: process.env.DATABASE_PATH || './data/app.db',
+  // Supabase
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
@@ -35,8 +36,18 @@ export const config = {
 
 // Validate required environment variables
 export function validateEnv(): void {
+  const errors: string[] = [];
   const warnings: string[] = [];
 
+  // Required: Supabase
+  if (!process.env.SUPABASE_URL) {
+    errors.push('SUPABASE_URL is required');
+  }
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    errors.push('SUPABASE_SERVICE_KEY is required');
+  }
+
+  // Optional warnings
   if (!process.env.OPENAI_API_KEY) {
     warnings.push('OPENAI_API_KEY not set - AI features will not work');
   }
@@ -48,6 +59,13 @@ export function validateEnv(): void {
     if (!process.env.SERVER_URL) {
       warnings.push('SERVER_URL not set in production - using default');
     }
+  }
+
+  if (errors.length > 0) {
+    console.error('\n❌ Missing Required Environment Variables:');
+    errors.forEach((e) => console.error(`   - ${e}`));
+    console.error('');
+    process.exit(1);
   }
 
   if (warnings.length > 0) {

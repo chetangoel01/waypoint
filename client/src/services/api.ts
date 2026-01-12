@@ -119,104 +119,99 @@ export const documentsApi = {
 
 // Work Experience endpoints
 export const experienceApi = {
-  list: () => request<WorkExperience[]>('/experience'),
-  get: (id: number) => request<WorkExperience>(`/experience/${id}`),
+  list: () => request<WorkExperience[]>('/profile/experience'),
+  get: (id: number) => request<WorkExperience>(`/profile/experience/${id}`),
   create: (data: Omit<WorkExperience, 'id' | 'created_at' | 'updated_at'>) =>
-    request<WorkExperience>('/experience', {
+    request<WorkExperience>('/profile/experience', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: number, data: Partial<WorkExperience>) =>
-    request<WorkExperience>(`/experience/${id}`, {
+    request<WorkExperience>(`/profile/experience/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    request<void>(`/experience/${id}`, {
+    request<void>(`/profile/experience/${id}`, {
       method: 'DELETE',
     }),
 };
 
 // Education endpoints
 export const educationApi = {
-  list: () => request<Education[]>('/education'),
-  get: (id: number) => request<Education>(`/education/${id}`),
+  list: () => request<Education[]>('/profile/education'),
+  get: (id: number) => request<Education>(`/profile/education/${id}`),
   create: (data: Omit<Education, 'id' | 'created_at' | 'updated_at'>) =>
-    request<Education>('/education', {
+    request<Education>('/profile/education', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: number, data: Partial<Education>) =>
-    request<Education>(`/education/${id}`, {
+    request<Education>(`/profile/education/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    request<void>(`/education/${id}`, {
+    request<void>(`/profile/education/${id}`, {
       method: 'DELETE',
     }),
 };
 
 // Skills endpoints
 export const skillsApi = {
-  list: () => request<Record<string, Skill[]>>('/skills'),
+  list: () => request<Skill[]>('/profile/skills'),
   create: (data: Omit<Skill, 'id' | 'created_at'>) =>
-    request<Skill>('/skills', {
+    request<Skill>('/profile/skills', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: number, data: Partial<Skill>) =>
-    request<Skill>(`/skills/${id}`, {
+    request<Skill>(`/profile/skills/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    request<void>(`/skills/${id}`, {
-      method: 'DELETE',
-    }),
-  deleteCategory: (category: string) =>
-    request<void>(`/skills/category/${encodeURIComponent(category)}`, {
+    request<void>(`/profile/skills/${id}`, {
       method: 'DELETE',
     }),
 };
 
 // Projects endpoints
 export const projectsApi = {
-  list: () => request<Project[]>('/projects'),
-  get: (id: number) => request<Project>(`/projects/${id}`),
+  list: () => request<Project[]>('/profile/projects'),
+  get: (id: number) => request<Project>(`/profile/projects/${id}`),
   create: (data: Omit<Project, 'id' | 'created_at' | 'updated_at'>) =>
-    request<Project>('/projects', {
+    request<Project>('/profile/projects', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: number, data: Partial<Project>) =>
-    request<Project>(`/projects/${id}`, {
+    request<Project>(`/profile/projects/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    request<void>(`/projects/${id}`, {
+    request<void>(`/profile/projects/${id}`, {
       method: 'DELETE',
     }),
 };
 
 // Stories endpoints
 export const storiesApi = {
-  list: () => request<Story[]>('/stories'),
-  get: (id: number) => request<Story>(`/stories/${id}`),
-  getByTag: (tag: string) => request<Story[]>(`/stories/tag/${encodeURIComponent(tag)}`),
+  list: () => request<Story[]>('/profile/stories'),
+  get: (id: number) => request<Story>(`/profile/stories/${id}`),
   create: (data: Omit<Story, 'id' | 'created_at' | 'updated_at'>) =>
-    request<Story>('/stories', {
+    request<Story>('/profile/stories', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: number, data: Partial<Story>) =>
-    request<Story>(`/stories/${id}`, {
+    request<Story>(`/profile/stories/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    request<void>(`/stories/${id}`, {
+    request<void>(`/profile/stories/${id}`, {
       method: 'DELETE',
     }),
 };

@@ -11,7 +11,7 @@ router.get(
     const applicationId = req.query.application_id
       ? parseInt(req.query.application_id as string, 10)
       : undefined;
-    const documents = documentsService.getAll(applicationId);
+    const documents = await documentsService.getAll(applicationId);
     res.json(success(documents));
   })
 );
@@ -21,7 +21,7 @@ router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const document = documentsService.getWithVersions(id);
+    const document = await documentsService.getWithVersions(id);
     if (!document) {
       notFound('Document');
     }
@@ -33,7 +33,7 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const document = documentsService.create(req.body);
+    const document = await documentsService.create(req.body);
     res.status(201).json(success(document));
   })
 );
@@ -43,7 +43,7 @@ router.put(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const document = documentsService.update(id, req.body);
+    const document = await documentsService.update(id, req.body);
     res.json(success(document));
   })
 );
@@ -53,7 +53,7 @@ router.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    documentsService.remove(id);
+    await documentsService.remove(id);
     res.json(success({ deleted: true }));
   })
 );
@@ -63,11 +63,11 @@ router.get(
   '/:id/versions',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const doc = documentsService.getById(id);
+    const doc = await documentsService.getById(id);
     if (!doc) {
       notFound('Document');
     }
-    const versions = documentsService.getVersions(id);
+    const versions = await documentsService.getVersions(id);
     res.json(success(versions));
   })
 );
@@ -77,7 +77,7 @@ router.post(
   '/:id/versions',
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
-    const version = documentsService.addVersion(id, req.body);
+    const version = await documentsService.addVersion(id, req.body);
     res.status(201).json(success(version));
   })
 );

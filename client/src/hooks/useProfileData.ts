@@ -131,7 +131,18 @@ export function useDeleteEducation() {
 export function useSkills() {
   return useQuery({
     queryKey: skillsKeys.list(),
-    queryFn: skillsApi.list,
+    queryFn: async () => {
+      const skills = await skillsApi.list();
+      // Group skills by category for backward compatibility
+      const grouped: Record<string, Skill[]> = {};
+      for (const skill of skills) {
+        if (!grouped[skill.category]) {
+          grouped[skill.category] = [];
+        }
+        grouped[skill.category].push(skill);
+      }
+      return grouped;
+    },
   });
 }
 

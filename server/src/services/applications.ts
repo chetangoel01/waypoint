@@ -1,22 +1,6 @@
-import db from '../db/index.js';
+import supabase from '../db/index.js';
 import { Application, ApplicationStatusOption, Contact } from '../types/index.js';
 import { validationError, notFound } from '../middleware/response.js';
-
-interface ApplicationRow {
-  id: number;
-  company: string;
-  role: string;
-  url: string | null;
-  job_description: string | null;
-  status: string;
-  date_saved: string;
-  date_applied: string | null;
-  contacts: string | null;
-  notes: string | null;
-  custom_statuses: string | null;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface CreateApplicationData {
   company: string;
@@ -47,143 +31,149 @@ export interface ApplicationFilters {
   company?: string;
 }
 
-function parseApplication(row: ApplicationRow): Application {
-  return {
-    ...row,
-    contacts: row.contacts ? JSON.parse(row.contacts) : null,
-    custom_statuses: row.custom_statuses ? JSON.parse(row.custom_statuses) : null,
-  };
-}
-
 // Get all applications with optional filters
-export function getAll(filters?: ApplicationFilters): Application[] {
-  let sql = 'SELECT * FROM applications';
-  const conditions: string[] = [];
-  const values: string[] = [];
+export async function getAll(filters?: ApplicationFilters): Promise<Application[]> {
+  let query = supabase
+    .from('applications')
+    .select('*')
+    .order('date_saved', { ascending: false });
 
   if (filters?.status) {
-    conditions.push('status = ?');
-    values.push(filters.status);
+    query = query.eq('status', filters.status);
   }
   if (filters?.company) {
-    conditions.push('company LIKE ?');
-    values.push(`%${filters.company}%`);
+    query = query.ilike('company', `%${filters.company}%`);
   }
 
-  if (conditions.length > 0) {
-    sql += ' WHERE ' + conditions.join(' AND ');
-  }
-  sql += ' ORDER BY date_saved DESC';
+  const { data, error } = await query;
 
-  const rows = db.prepare(sql).all(...values) as ApplicationRow[];
-  return rows.map(parseApplication);
+  if (error) {
+    throw new Error(`Failed to fetch applications: ${error.message}`);
+  }
+
+  return data || [];
 }
 
 // Get single application by ID
-export function getById(id: number): Application | null {
-  const row = db.prepare('SELECT * FROM applications WHERE id = ?').get(id) as ApplicationRow | undefined;
-  return row ? parseApplication(row) : null;
+export async function getById(id: number): Promise<Application | null> {
+  const { data, error } = await supabase
+    .from('applications')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Not found
+    }
+    throw new Error(`Failed to fetch application: ${error.message}`);
+  }
+
+  return data;
 }
 
 // Create new application
-export function create(data: CreateApplicationData): Application {
+export async function create(data: CreateApplicationData): Promise<Application> {
   if (!data.company || !data.role) {
     validationError('Company and role are required');
   }
 
-  const stmt = db.prepare(`
-    INSERT INTO applications (company, role, url, job_description, status, date_applied, contacts, notes, custom_statuses)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  const { data: created, error } = await supabase
+    .from('applications')
+    .insert({
+      company: data.company,
+      role: data.role,
+      url: data.url || null,
+      job_description: data.job_description || null,
+      status: data.status || 'saved',
+      date_applied: data.date_applied || null,
+      contacts: data.contacts || null,
+      notes: data.notes || null,
+      custom_statuses: data.custom_statuses || null,
+    })
+    .select()
+    .single();
 
-  const result = stmt.run(
-    data.company,
-    data.role,
-    data.url || null,
-    data.job_description || null,
-    data.status || 'saved',
-    data.date_applied || null,
-    data.contacts ? JSON.stringify(data.contacts) : null,
-    data.notes || null,
-    data.custom_statuses ? JSON.stringify(data.custom_statuses) : null
-  );
+  if (error) {
+    throw new Error(`Failed to create application: ${error.message}`);
+  }
 
-  return getById(result.lastInsertRowid as number)!;
+  return created;
 }
 
 // Update application
-export function update(id: number, data: UpdateApplicationData): Application {
-  const existing = getById(id);
+export async function update(id: number, data: UpdateApplicationData): Promise<Application> {
+  const existing = await getById(id);
   if (!existing) {
     notFound('Application');
   }
 
-  const fields: string[] = [];
-  const values: (string | null)[] = [];
+  const updateData: Record<string, unknown> = {};
 
-  if (data.company !== undefined) {
-    fields.push('company = ?');
-    values.push(data.company);
-  }
-  if (data.role !== undefined) {
-    fields.push('role = ?');
-    values.push(data.role);
-  }
-  if (data.url !== undefined) {
-    fields.push('url = ?');
-    values.push(data.url);
-  }
-  if (data.job_description !== undefined) {
-    fields.push('job_description = ?');
-    values.push(data.job_description);
-  }
-  if (data.status !== undefined) {
-    fields.push('status = ?');
-    values.push(data.status);
-  }
-  if (data.date_applied !== undefined) {
-    fields.push('date_applied = ?');
-    values.push(data.date_applied);
-  }
-  if (data.contacts !== undefined) {
-    fields.push('contacts = ?');
-    values.push(data.contacts ? JSON.stringify(data.contacts) : null);
-  }
-  if (data.notes !== undefined) {
-    fields.push('notes = ?');
-    values.push(data.notes);
-  }
-  if (data.custom_statuses !== undefined) {
-    fields.push('custom_statuses = ?');
-    values.push(data.custom_statuses ? JSON.stringify(data.custom_statuses) : null);
+  if (data.company !== undefined) updateData.company = data.company;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.url !== undefined) updateData.url = data.url;
+  if (data.job_description !== undefined) updateData.job_description = data.job_description;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.date_applied !== undefined) updateData.date_applied = data.date_applied;
+  if (data.contacts !== undefined) updateData.contacts = data.contacts;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.custom_statuses !== undefined) updateData.custom_statuses = data.custom_statuses;
+
+  if (Object.keys(updateData).length === 0) {
+    return existing;
   }
 
-  if (fields.length > 0) {
-    const sql = `UPDATE applications SET ${fields.join(', ')} WHERE id = ?`;
-    db.prepare(sql).run(...values, id);
+  const { data: updated, error } = await supabase
+    .from('applications')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update application: ${error.message}`);
   }
 
-  return getById(id)!;
+  return updated;
 }
 
 // Delete application
-export function remove(id: number): boolean {
-  const existing = getById(id);
+export async function remove(id: number): Promise<boolean> {
+  const existing = await getById(id);
   if (!existing) {
     notFound('Application');
   }
 
-  db.prepare('DELETE FROM applications WHERE id = ?').run(id);
+  const { error } = await supabase
+    .from('applications')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to delete application: ${error.message}`);
+  }
+
   return true;
 }
 
 // Update status only
-export function updateStatus(id: number, status: string): Application {
-  const existing = getById(id);
+export async function updateStatus(id: number, status: string): Promise<Application> {
+  const existing = await getById(id);
   if (!existing) {
     notFound('Application');
   }
 
-  db.prepare('UPDATE applications SET status = ? WHERE id = ?').run(status, id);
-  return getById(id)!;
+  const { data: updated, error } = await supabase
+    .from('applications')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update application status: ${error.message}`);
+  }
+
+  return updated;
 }

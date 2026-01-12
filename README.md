@@ -40,7 +40,7 @@ A personal job application tracker with AI-powered content generation and Gmail 
 
 - **Frontend:** React, TypeScript, Vite, CSS Modules, React Query
 - **Backend:** Node.js, Express, TypeScript
-- **Database:** SQLite (better-sqlite3)
+- **Database:** Supabase (PostgreSQL)
 - **AI:** OpenAI GPT-4o-mini
 - **Email:** Gmail API with OAuth 2.0
 
@@ -63,9 +63,6 @@ cd waypoint
 # Install dependencies
 npm install
 
-# Initialize the database
-npm run db:init
-
 # Start development servers
 npm run dev
 ```
@@ -87,8 +84,9 @@ PORT=3001
 SERVER_URL=http://localhost:3001
 CLIENT_URL=http://localhost:5173
 
-# Database path
-DATABASE_PATH=./data/app.db
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
 
 # OpenAI API Key (can also be set in Settings)
 OPENAI_API_KEY=sk-your-key-here
@@ -173,7 +171,6 @@ npm run dev:server   # Start only the backend
 npm run build        # Build all packages
 npm run build:prod   # Build for production
 npm run start:prod   # Start production server
-npm run db:init      # Initialize/migrate database
 ```
 
 ## Production Deployment
@@ -199,9 +196,6 @@ npm ci
 
 # Build for production
 npm run build:prod
-
-# Initialize database (first time only)
-npm run db:init
 
 # Start production server
 npm run start:prod

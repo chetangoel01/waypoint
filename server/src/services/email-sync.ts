@@ -1,4 +1,4 @@
-import db from '../db/index.js';
+import supabase from '../db/index.js';
 import { Settings } from './settings.js';
 import { fetchRecentEmails } from './gmail.js';
 import { processEmail } from './email-processor.js';
@@ -12,61 +12,62 @@ import type {
 } from '../types/index.js';
 
 // Check if an email has already been processed
-function isEmailProcessed(emailId: string): boolean {
-  const row = db
-    .prepare('SELECT id FROM processed_emails WHERE email_id = ?')
-    .get(emailId);
-  return !!row;
+async function isEmailProcessed(emailId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('processed_emails')
+    .select('id')
+    .eq('email_id', emailId)
+    .single();
+
+  return !!data;
 }
 
 // Save a processed email record
-function saveProcessedEmail(
+async function saveProcessedEmail(
   emailId: string,
   isJobRelated: boolean,
   applicationId: number | null,
   email: GmailMessage
-): void {
-  db.prepare(
-    `INSERT INTO processed_emails
-     (email_id, is_job_related, application_id, email_from, email_subject, email_date)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
-    emailId,
-    isJobRelated ? 1 : 0,
-    applicationId,
-    email.from,
-    email.subject,
-    email.date
-  );
+): Promise<void> {
+  const { error } = await supabase.from('processed_emails').insert({
+    email_id: emailId,
+    is_job_related: isJobRelated,
+    application_id: applicationId,
+    email_from: email.from,
+    email_subject: email.subject,
+    email_date: email.date,
+  });
+
+  if (error) {
+    throw new Error(`Failed to save processed email: ${error.message}`);
+  }
 }
 
 // Find existing application that might match this job info
-function findMatchingApplication(
+async function findMatchingApplication(
   jobInfo: ExtractedJobInfo
-): { id: number } | null {
+): Promise<{ id: number } | null> {
   // Try to find by company and role (case-insensitive)
-  const row = db
-    .prepare(
-      `SELECT id FROM applications
-       WHERE LOWER(company) = LOWER(?)
-       AND LOWER(role) = LOWER(?)
-       ORDER BY created_at DESC
-       LIMIT 1`
-    )
-    .get(jobInfo.company, jobInfo.role) as { id: number } | undefined;
+  const { data: row } = await supabase
+    .from('applications')
+    .select('id')
+    .ilike('company', jobInfo.company)
+    .ilike('role', jobInfo.role)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
 
   if (row) return row;
 
   // Try to find by just company name if role is generic
   if (jobInfo.role === 'Unknown Role') {
-    const companyRow = db
-      .prepare(
-        `SELECT id FROM applications
-         WHERE LOWER(company) = LOWER(?)
-         ORDER BY created_at DESC
-         LIMIT 1`
-      )
-      .get(jobInfo.company) as { id: number } | undefined;
+    const { data: companyRow } = await supabase
+      .from('applications')
+      .select('id')
+      .ilike('company', jobInfo.company)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
     return companyRow || null;
   }
@@ -88,99 +89,101 @@ function parseEmailDate(dateString: string): string {
 }
 
 // Create a new application from email job info
-function createApplicationFromEmail(
+async function createApplicationFromEmail(
   jobInfo: ExtractedJobInfo,
   email: GmailMessage
-): number {
+): Promise<number> {
   const contacts = jobInfo.contactName
-    ? JSON.stringify([
+    ? [
         {
           name: jobInfo.contactName,
           email: jobInfo.contactEmail,
         },
-      ])
+      ]
     : null;
 
   // Use email date for date_applied, not current date
   const emailDate = parseEmailDate(email.date);
 
-  const result = db
-    .prepare(
-      `INSERT INTO applications
-       (company, role, url, job_description, status, date_applied, date_saved, contacts, email_id, email_subject, email_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      jobInfo.company,
-      jobInfo.role,
-      jobInfo.url || null,
-      jobInfo.jobDescription || null,
-      jobInfo.status,
-      emailDate,
-      emailDate,
-      contacts,
-      email.id,
-      email.subject,
-      email.date
-    );
+  const { data, error } = await supabase
+    .from('applications')
+    .insert({
+      company: jobInfo.company,
+      role: jobInfo.role,
+      url: jobInfo.url || null,
+      job_description: jobInfo.jobDescription || null,
+      status: jobInfo.status,
+      date_applied: emailDate,
+      date_saved: emailDate,
+      contacts: contacts,
+      email_id: email.id,
+      email_subject: email.subject,
+      email_date: email.date,
+    })
+    .select('id')
+    .single();
 
-  return Number(result.lastInsertRowid);
+  if (error) {
+    throw new Error(`Failed to create application from email: ${error.message}`);
+  }
+
+  return data.id;
 }
 
 // Update an existing application with new status from email
-function updateApplicationFromEmail(
+async function updateApplicationFromEmail(
   applicationId: number,
   jobInfo: ExtractedJobInfo,
   email: GmailMessage
-): void {
+): Promise<void> {
   // Get current application
-  const app = applicationsService.getById(applicationId);
+  const app = await applicationsService.getById(applicationId);
   if (!app) return;
 
   // Determine if we should update status
-  // Only update if the new status represents progression or rejection
   const statusPriority: Record<string, number> = {
     saved: 0,
     applied: 1,
     phone_screen: 2,
     interview: 3,
     offer: 4,
-    rejected: 5, // Always show rejection
+    rejected: 5,
     withdrawn: 6,
   };
 
   const currentPriority = statusPriority[app.status] ?? 0;
   const newPriority = statusPriority[jobInfo.status] ?? 0;
 
-  // Update if new status is higher priority (progression) or rejection
+  // Update if new status is higher priority or rejection
   if (newPriority > currentPriority || jobInfo.status === 'rejected') {
-    db.prepare(
-      `UPDATE applications
-       SET status = ?, email_id = ?, email_subject = ?, email_date = ?
-       WHERE id = ?`
-    ).run(jobInfo.status, email.id, email.subject, email.date, applicationId);
+    await supabase
+      .from('applications')
+      .update({
+        status: jobInfo.status,
+        email_id: email.id,
+        email_subject: email.subject,
+        email_date: email.date,
+      })
+      .eq('id', applicationId);
   }
 
   // Update contact info if provided and not already present
   if (jobInfo.contactName && !app.contacts?.length) {
-    const contacts = JSON.stringify([
+    const contacts = [
       {
         name: jobInfo.contactName,
         email: jobInfo.contactEmail,
       },
-    ]);
-    db.prepare('UPDATE applications SET contacts = ? WHERE id = ?').run(
-      contacts,
-      applicationId
-    );
+    ];
+    await supabase.from('applications').update({ contacts }).eq('id', applicationId);
   }
 
   // Update job description if not already present
   if (jobInfo.jobDescription && !app.job_description) {
-    db.prepare('UPDATE applications SET job_description = ? WHERE id = ?').run(
-      jobInfo.jobDescription,
-      applicationId
-    );
+    await supabase
+      .from('applications')
+      .update({ job_description: jobInfo.jobDescription })
+      .eq('id', applicationId);
   }
 }
 
@@ -205,7 +208,7 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 
   try {
     // Get last sync date, default to 7 days ago for first sync
-    const lastSync = Settings.getLastSyncDate();
+    const lastSync = await Settings.getLastSyncDate();
     const afterDate = lastSync || getDateDaysAgo(7);
 
     sendProgress({
@@ -219,7 +222,14 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
     const emails = await fetchRecentEmails(100, afterDate);
 
     // Filter out already processed emails
-    const emailsToProcess = emails.filter(email => !isEmailProcessed(email.id));
+    const emailsToProcess: GmailMessage[] = [];
+    for (const email of emails) {
+      const processed = await isEmailProcessed(email.id);
+      if (!processed) {
+        emailsToProcess.push(email);
+      }
+    }
+
     const alreadyProcessed = emails.length - emailsToProcess.length;
     result.skipped = alreadyProcessed;
 
@@ -248,7 +258,7 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 
         if (!classification.isJobRelated || !jobInfo) {
           // Save as non-job-related
-          saveProcessedEmail(email.id, false, null, email);
+          await saveProcessedEmail(email.id, false, null, email);
           continue;
         }
 
@@ -261,32 +271,31 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
         });
 
         // Check for existing application
-        const existingApp = findMatchingApplication(jobInfo);
+        const existingApp = await findMatchingApplication(jobInfo);
 
         let applicationId: number;
 
         if (existingApp) {
           // Update existing application
-          updateApplicationFromEmail(existingApp.id, jobInfo, email);
+          await updateApplicationFromEmail(existingApp.id, jobInfo, email);
           applicationId = existingApp.id;
           result.updatedApplications++;
         } else {
           // Create new application
-          applicationId = createApplicationFromEmail(jobInfo, email);
+          applicationId = await createApplicationFromEmail(jobInfo, email);
           result.newApplications++;
         }
 
         // Save processed email record
-        saveProcessedEmail(email.id, true, applicationId, email);
+        await saveProcessedEmail(email.id, true, applicationId, email);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         result.errors.push(`Email ${email.id}: ${errorMessage}`);
       }
     }
 
     // Update last sync date
-    Settings.setLastSyncDate(new Date().toISOString());
+    await Settings.setLastSyncDate(new Date().toISOString());
 
     sendProgress({
       stage: 'complete',
@@ -295,8 +304,7 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
       total: emailsToProcess.length,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     result.errors.push(`Sync failed: ${errorMessage}`);
 
     sendProgress({
@@ -311,14 +319,18 @@ export async function syncEmails(onProgress?: ProgressCallback): Promise<SyncRes
 }
 
 // Get processed emails for display
-export function getProcessedEmails(limit: number = 50): ProcessedEmail[] {
-  return db
-    .prepare(
-      `SELECT * FROM processed_emails
-       ORDER BY processed_at DESC
-       LIMIT ?`
-    )
-    .all(limit) as ProcessedEmail[];
+export async function getProcessedEmails(limit: number = 50): Promise<ProcessedEmail[]> {
+  const { data, error } = await supabase
+    .from('processed_emails')
+    .select('*')
+    .order('processed_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Failed to get processed emails: ${error.message}`);
+  }
+
+  return data || [];
 }
 
 // Helper to get date N days ago

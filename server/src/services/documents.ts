@@ -1,26 +1,6 @@
-import db from '../db/index.js';
+import supabase from '../db/index.js';
 import { Document, DocumentVersion, DocumentType } from '../types/index.js';
 import { validationError, notFound } from '../middleware/response.js';
-
-interface DocumentRow {
-  id: number;
-  application_id: number | null;
-  type: DocumentType;
-  question: string | null;
-  key_points: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface DocumentVersionRow {
-  id: number;
-  document_id: number;
-  version: number;
-  content: string;
-  prompt_used: string | null;
-  is_ai_generated: number;
-  created_at: string;
-}
 
 export interface CreateDocumentData {
   application_id?: number | null;
@@ -44,84 +24,101 @@ export interface CreateVersionData {
 
 const VALID_TYPES: DocumentType[] = ['cover_letter', 'custom_question'];
 
-function parseDocument(row: DocumentRow): Document {
-  return {
-    ...row,
-    key_points: row.key_points ? JSON.parse(row.key_points) : null,
-  };
-}
-
-function parseVersion(row: DocumentVersionRow): DocumentVersion {
-  return {
-    ...row,
-    is_ai_generated: Boolean(row.is_ai_generated),
-  };
-}
-
 // Get all documents with latest version
-export function getAll(applicationId?: number): (Document & { versions: DocumentVersion[] })[] {
-  let sql = 'SELECT * FROM documents';
-  const values: number[] = [];
+export async function getAll(
+  applicationId?: number
+): Promise<(Document & { versions: DocumentVersion[] })[]> {
+  let query = supabase
+    .from('documents')
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (applicationId !== undefined) {
-    sql += ' WHERE application_id = ?';
-    values.push(applicationId);
+    query = query.eq('application_id', applicationId);
   }
-  sql += ' ORDER BY created_at DESC';
 
-  const rows = db.prepare(sql).all(...values) as DocumentRow[];
-  return rows.map(row => {
-    const doc = parseDocument(row);
-    // Get only the latest version for each document
-    const latestVersion = db.prepare(
-      'SELECT * FROM document_versions WHERE document_id = ? ORDER BY version DESC LIMIT 1'
-    ).get(row.id) as DocumentVersionRow | undefined;
-    return {
-      ...doc,
-      versions: latestVersion ? [parseVersion(latestVersion)] : [],
-    };
-  });
+  const { data: docs, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to fetch documents: ${error.message}`);
+  }
+
+  // Get latest version for each document
+  const results = await Promise.all(
+    (docs || []).map(async (doc) => {
+      const { data: versions } = await supabase
+        .from('document_versions')
+        .select('*')
+        .eq('document_id', doc.id)
+        .order('version', { ascending: false })
+        .limit(1);
+
+      return {
+        ...doc,
+        versions: versions || [],
+      };
+    })
+  );
+
+  return results;
 }
 
 // Get single document by ID
-export function getById(id: number): Document | null {
-  const row = db.prepare('SELECT * FROM documents WHERE id = ?').get(id) as DocumentRow | undefined;
-  return row ? parseDocument(row) : null;
+export async function getById(id: number): Promise<Document | null> {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    throw new Error(`Failed to fetch document: ${error.message}`);
+  }
+
+  return data;
 }
 
 // Get document with all versions
-export function getWithVersions(id: number): (Document & { versions: DocumentVersion[] }) | null {
-  const doc = getById(id);
+export async function getWithVersions(
+  id: number
+): Promise<(Document & { versions: DocumentVersion[] }) | null> {
+  const doc = await getById(id);
   if (!doc) return null;
 
-  const versions = getVersions(id);
+  const versions = await getVersions(id);
   return { ...doc, versions };
 }
 
 // Create document
-export function create(data: CreateDocumentData): Document {
+export async function create(data: CreateDocumentData): Promise<Document> {
   if (!data.type || !VALID_TYPES.includes(data.type)) {
     validationError(`Invalid type. Must be one of: ${VALID_TYPES.join(', ')}`);
   }
 
-  const stmt = db.prepare(`
-    INSERT INTO documents (application_id, type, question, key_points)
-    VALUES (?, ?, ?, ?)
-  `);
+  const { data: created, error } = await supabase
+    .from('documents')
+    .insert({
+      application_id: data.application_id || null,
+      type: data.type,
+      question: data.question || null,
+      key_points: data.key_points || null,
+    })
+    .select()
+    .single();
 
-  const result = stmt.run(
-    data.application_id || null,
-    data.type,
-    data.question || null,
-    data.key_points ? JSON.stringify(data.key_points) : null
-  );
+  if (error) {
+    throw new Error(`Failed to create document: ${error.message}`);
+  }
 
-  return getById(result.lastInsertRowid as number)!;
+  return created;
 }
 
 // Update document
-export function update(id: number, data: UpdateDocumentData): Document {
-  const existing = getById(id);
+export async function update(id: number, data: UpdateDocumentData): Promise<Document> {
+  const existing = await getById(id);
   if (!existing) {
     notFound('Document');
   }
@@ -130,56 +127,68 @@ export function update(id: number, data: UpdateDocumentData): Document {
     validationError(`Invalid type. Must be one of: ${VALID_TYPES.join(', ')}`);
   }
 
-  const fields: string[] = [];
-  const values: (string | number | null)[] = [];
+  const updateData: Record<string, unknown> = {};
 
-  if (data.application_id !== undefined) {
-    fields.push('application_id = ?');
-    values.push(data.application_id);
-  }
-  if (data.type !== undefined) {
-    fields.push('type = ?');
-    values.push(data.type);
-  }
-  if (data.question !== undefined) {
-    fields.push('question = ?');
-    values.push(data.question);
-  }
-  if (data.key_points !== undefined) {
-    fields.push('key_points = ?');
-    values.push(data.key_points ? JSON.stringify(data.key_points) : null);
+  if (data.application_id !== undefined) updateData.application_id = data.application_id;
+  if (data.type !== undefined) updateData.type = data.type;
+  if (data.question !== undefined) updateData.question = data.question;
+  if (data.key_points !== undefined) updateData.key_points = data.key_points;
+
+  if (Object.keys(updateData).length === 0) {
+    return existing;
   }
 
-  if (fields.length > 0) {
-    const sql = `UPDATE documents SET ${fields.join(', ')} WHERE id = ?`;
-    db.prepare(sql).run(...values, id);
+  const { data: updated, error } = await supabase
+    .from('documents')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update document: ${error.message}`);
   }
 
-  return getById(id)!;
+  return updated;
 }
 
 // Delete document
-export function remove(id: number): boolean {
-  const existing = getById(id);
+export async function remove(id: number): Promise<boolean> {
+  const existing = await getById(id);
   if (!existing) {
     notFound('Document');
   }
 
-  db.prepare('DELETE FROM documents WHERE id = ?').run(id);
+  const { error } = await supabase.from('documents').delete().eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to delete document: ${error.message}`);
+  }
+
   return true;
 }
 
 // Get all versions for a document
-export function getVersions(documentId: number): DocumentVersion[] {
-  const rows = db.prepare(
-    'SELECT * FROM document_versions WHERE document_id = ? ORDER BY version DESC'
-  ).all(documentId) as DocumentVersionRow[];
-  return rows.map(parseVersion);
+export async function getVersions(documentId: number): Promise<DocumentVersion[]> {
+  const { data, error } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('document_id', documentId)
+    .order('version', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch document versions: ${error.message}`);
+  }
+
+  return data || [];
 }
 
 // Add new version
-export function addVersion(documentId: number, data: CreateVersionData): DocumentVersion {
-  const doc = getById(documentId);
+export async function addVersion(
+  documentId: number,
+  data: CreateVersionData
+): Promise<DocumentVersion> {
+  const doc = await getById(documentId);
   if (!doc) {
     notFound('Document');
   }
@@ -189,28 +198,31 @@ export function addVersion(documentId: number, data: CreateVersionData): Documen
   }
 
   // Get the latest version number
-  const latestVersion = db.prepare(
-    'SELECT MAX(version) as max_version FROM document_versions WHERE document_id = ?'
-  ).get(documentId) as { max_version: number | null };
+  const { data: latestVersion } = await supabase
+    .from('document_versions')
+    .select('version')
+    .eq('document_id', documentId)
+    .order('version', { ascending: false })
+    .limit(1)
+    .single();
 
-  const newVersion = (latestVersion?.max_version || 0) + 1;
+  const newVersion = (latestVersion?.version || 0) + 1;
 
-  const stmt = db.prepare(`
-    INSERT INTO document_versions (document_id, version, content, prompt_used, is_ai_generated)
-    VALUES (?, ?, ?, ?, ?)
-  `);
+  const { data: created, error } = await supabase
+    .from('document_versions')
+    .insert({
+      document_id: documentId,
+      version: newVersion,
+      content: data.content,
+      prompt_used: data.prompt_used || null,
+      is_ai_generated: data.is_ai_generated ?? true,
+    })
+    .select()
+    .single();
 
-  const result = stmt.run(
-    documentId,
-    newVersion,
-    data.content,
-    data.prompt_used || null,
-    data.is_ai_generated ? 1 : 0
-  );
+  if (error) {
+    throw new Error(`Failed to add document version: ${error.message}`);
+  }
 
-  const row = db.prepare('SELECT * FROM document_versions WHERE id = ?').get(
-    result.lastInsertRowid
-  ) as DocumentVersionRow;
-
-  return parseVersion(row);
+  return created;
 }
