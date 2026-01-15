@@ -81,9 +81,16 @@ export function Dashboard() {
     );
   }
 
-  const responseRate = stats && stats.total > 0
-    ? Math.round(((stats.interviews + stats.offers) / (stats.total - stats.active)) * 100) || 0
-    : 0;
+  // Calculate applications this week
+  const applicationsThisWeek = (() => {
+    if (!applications) return 0;
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    return applications.filter(app => {
+      const appDate = new Date(app.date_applied || app.date_saved);
+      return appDate >= oneWeekAgo;
+    }).length;
+  })();
 
   // Status distribution data for chart - warm editorial palette
   const statusData = stats ? [
@@ -154,26 +161,14 @@ export function Dashboard() {
             </div>
           </div>
           <div className={styles.statCard}>
-            <div className={styles.statLabel}>Response Rate</div>
-            <div className={styles.statValue}>{responseRate}%</div>
-            {/* Mini progress bar for response rate */}
-            <div style={{
-              width: '100%',
-              height: 4,
-              backgroundColor: 'var(--color-bg-subtle)',
-              borderRadius: 2,
-              overflow: 'hidden',
-              marginTop: 'var(--space-2)',
-            }}>
-              <div style={{
-                width: `${Math.min(responseRate, 100)}%`,
-                height: '100%',
-                backgroundColor: responseRate >= 30 ? 'var(--color-sage)' : 'var(--color-honey)',
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
+            <div className={styles.statLabel}>This Week</div>
+            <div className={styles.statValue}>{applicationsThisWeek}</div>
             <div className={styles.statMeta}>
-              {responseRate >= 30 ? 'Above average' : responseRate > 0 ? 'Keep going!' : 'No responses yet'}
+              {applicationsThisWeek === 0
+                ? 'No applications yet'
+                : applicationsThisWeek === 1
+                ? 'application submitted'
+                : 'applications submitted'}
             </div>
           </div>
           <div className={styles.statCard}>

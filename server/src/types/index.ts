@@ -213,3 +213,55 @@ export interface OAuthToken {
   created_at: string;
   updated_at: string;
 }
+
+// Resume parsing types
+export interface ParsedResumeProfile {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+  career_goals: string | null;
+}
+
+export interface ParsedResumeExperience {
+  company: string;
+  role: string;
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  achievements: string[];
+}
+
+export interface ParsedResumeEducation {
+  institution: string;
+  degree: string;
+  field: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  gpa: number | null;
+}
+
+export interface ParsedResumeSkill {
+  category: string;
+  name: string;
+  proficiency: string | null;
+}
+
+export interface ParsedResumeProject {
+  name: string;
+  description: string | null;
+  technologies: string[];
+  outcomes: string | null;
+  url: string | null;
+}
+
+export interface ParsedResumeData {
+  profile: ParsedResumeProfile;
+  experience: ParsedResumeExperience[];
+  education: ParsedResumeEducation[];
+  skills: ParsedResumeSkill[];
+  projects: ParsedResumeProject[];
+}

@@ -119,6 +119,11 @@
   border-color: var(--border-subtle);
 }
 
+.actionBtn:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
+
 .actionBtnEdit:hover {
   color: var(--color-sky);
   background: rgba(56, 189, 248, 0.08);
@@ -174,6 +179,11 @@
   background: rgba(56, 189, 248, 0.1);
 }
 
+.skillCategoryEdit:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
+
 .skillTags {
   display: flex;
   flex-wrap: wrap;
@@ -223,6 +233,11 @@
 .skillRemove:hover {
   background: rgba(244, 63, 94, 0.1);
   color: var(--color-rose);
+}
+
+.skillRemove:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 1px;
 }
 
 .skillRemove svg {
@@ -338,6 +353,11 @@
   background: var(--color-bg-subtle);
 }
 
+.rawPromptToggle:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
+
 .rawPromptToggle svg {
   width: 16px;
   height: 16px;
@@ -346,11 +366,11 @@
 .rawPrompt {
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: #1a1a1a;
+  background: var(--color-code-bg);
   border-radius: var(--radius-md);
-  font-family: var(--font-mono, 'SF Mono', 'Fira Code', monospace);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: #e0e0e0;
+  color: var(--color-code-text);
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.6;
@@ -367,7 +387,7 @@
 }
 
 .rawPrompt::-webkit-scrollbar-thumb {
-  background: #444;
+  background: var(--color-code-scrollbar);
   border-radius: 3px;
 }
 
@@ -398,6 +418,11 @@
   background: rgba(196, 93, 58, 0.05);
 }
 
+.suggestionChip:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
+
 /* Empty state */
 .emptyHint {
   padding: var(--space-4) var(--space-5);
@@ -406,4 +431,181 @@
   font-size: var(--text-sm);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-md);
+}
+
+/* ============================================
+   RESUME PARSE MODAL STYLES
+   ============================================ */
+
+.parseModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Section card for parsed data */
+.sectionCard {
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background-color: transparent;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.sectionCardSelected {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-subtle);
+}
+
+.sectionCardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+}
+
+.sectionCardCheckbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+.sectionCardCheckbox:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.sectionCardIcon {
+  color: var(--color-accent);
+  display: flex;
+  width: 20px;
+  height: 20px;
+}
+
+.sectionCardIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sectionCardTitle {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+}
+
+.sectionCardContent {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.sectionCardContentFaded {
+  opacity: 0.5;
+}
+
+/* Data field display */
+.dataFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-2);
+}
+
+.dataField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dataFieldLabel {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.dataFieldValue {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+
+/* Experience/Education entry in modal */
+.parseEntryItem {
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+
+.parseEntryItem:last-child {
+  margin-bottom: 0;
+}
+
+.parseEntryTitle {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.parseEntryMeta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+.parseEntryDescription {
+  font-size: var(--text-sm);
+  color: var(--color-ink-light);
+  margin: var(--space-1) 0 0 0;
+  line-height: 1.5;
+}
+
+.parseEntryList {
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 0 0;
+  padding-left: var(--space-4);
+  color: var(--color-ink);
+}
+
+.parseEntryList li {
+  margin-bottom: var(--space-1);
+}
+
+.parseEntryListMore {
+  color: var(--color-ink-muted);
+  font-style: italic;
+}
+
+/* Tech tags in projects */
+.techTagsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.techTag {
+  font-size: var(--text-xs);
+  padding: 2px 6px;
+  background-color: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-muted);
+}
+
+/* Flex containers for parsed content */
+.parseColumnLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.parseColumnLayoutTight {
+  gap: var(--space-2);
+}
+
+/* Skills display in parse modal */
+.parseSkillsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }

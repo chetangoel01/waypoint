@@ -29,6 +29,7 @@ export {
   useStatusOptions,
   useUpdateStatuses,
   useResetStatuses,
+  useParseResume,
   aiKeys,
   settingsKeys,
 } from './useAi';

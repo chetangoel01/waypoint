@@ -100,7 +100,7 @@ export function ExperienceSection() {
       start_date: exp.start_date || '',
       end_date: exp.end_date || '',
       description: exp.description || '',
-      achievements: exp.achievements?.join('\n') || '',
+      achievements: Array.isArray(exp.achievements) ? exp.achievements.join('\n') : '',
     });
     setPreviewItem(null);
     setIsModalOpen(true);
@@ -224,7 +224,7 @@ export function ExperienceSection() {
                 <p className={sectionStyles.previewValue}>{previewItem.description}</p>
               </div>
             )}
-            {previewItem.achievements && previewItem.achievements.length > 0 && (
+            {previewItem.achievements && Array.isArray(previewItem.achievements) && previewItem.achievements.length > 0 && (
               <div className={sectionStyles.previewSection}>
                 <p className={sectionStyles.previewLabel}>Key Achievements</p>
                 <ul className={sectionStyles.previewList}>
@@ -400,7 +400,7 @@ export function EducationSection() {
       start_date: edu.start_date || '',
       end_date: edu.end_date || '',
       gpa: edu.gpa?.toString() || '',
-      coursework: edu.coursework?.join('\n') || '',
+      coursework: Array.isArray(edu.coursework) ? edu.coursework.join('\n') : '',
     });
     setPreviewItem(null);
     setIsModalOpen(true);
@@ -916,7 +916,7 @@ export function ProjectsSection() {
     setFormData({
       name: proj.name,
       description: proj.description || '',
-      technologies: proj.technologies?.join(', ') || '',
+      technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
       outcomes: proj.outcomes || '',
       url: proj.url || '',
     });
@@ -992,8 +992,8 @@ export function ProjectsSection() {
               <div className={sectionStyles.entryContent}>
                 <p className={sectionStyles.entryTitle}>{proj.name}</p>
                 <p className={sectionStyles.entrySubtitle}>
-                  {proj.technologies?.slice(0, 3).join(', ')}
-                  {proj.technologies && proj.technologies.length > 3 && ` +${proj.technologies.length - 3} more`}
+                  {Array.isArray(proj.technologies) && proj.technologies.slice(0, 3).join(', ')}
+                  {Array.isArray(proj.technologies) && proj.technologies.length > 3 && ` +${proj.technologies.length - 3} more`}
                 </p>
               </div>
               <div className={sectionStyles.entryActions}>
@@ -1038,7 +1038,7 @@ export function ProjectsSection() {
                 <p className={sectionStyles.previewValue}>{previewItem.description}</p>
               </div>
             )}
-            {previewItem.technologies && previewItem.technologies.length > 0 && (
+            {previewItem.technologies && Array.isArray(previewItem.technologies) && previewItem.technologies.length > 0 && (
               <div className={sectionStyles.previewSection}>
                 <p className={sectionStyles.previewLabel}>Technologies</p>
                 <div className={sectionStyles.entryMeta}>
@@ -1228,7 +1228,7 @@ export function StoriesSection() {
       task: story.task || '',
       action: story.action || '',
       result: story.result || '',
-      tags: story.tags?.join(', ') || '',
+      tags: Array.isArray(story.tags) ? story.tags.join(', ') : '',
     });
     setPreviewItem(null);
     setIsModalOpen(true);

@@ -264,6 +264,58 @@ export interface GenerationResult {
 
 export type CoverLetterTone = 'professional' | 'conversational' | 'enthusiastic';
 
+// Parsed resume data types
+export interface ParsedResumeProfile {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+  career_goals: string | null;
+}
+
+export interface ParsedResumeExperience {
+  company: string;
+  role: string;
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  achievements: string[];
+}
+
+export interface ParsedResumeEducation {
+  institution: string;
+  degree: string;
+  field: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  gpa: number | null;
+}
+
+export interface ParsedResumeSkill {
+  category: string;
+  name: string;
+  proficiency: string | null;
+}
+
+export interface ParsedResumeProject {
+  name: string;
+  description: string | null;
+  technologies: string[];
+  outcomes: string | null;
+  url: string | null;
+}
+
+export interface ParsedResumeData {
+  profile: ParsedResumeProfile;
+  experience: ParsedResumeExperience[];
+  education: ParsedResumeEducation[];
+  skills: ParsedResumeSkill[];
+  projects: ParsedResumeProject[];
+}
+
 // AI Generation endpoints
 export const generateApi = {
   coverLetter: (applicationId: number, options?: { additionalContext?: string; tone?: CoverLetterTone }) =>
@@ -283,6 +335,11 @@ export const generateApi = {
     }),
   status: () => request<{ configured: boolean }>('/generate/status'),
   context: () => request<{ context: string }>('/generate/context'),
+  parseResume: (resumeText: string) =>
+    request<ParsedResumeData>('/generate/parse-resume', {
+      method: 'POST',
+      body: JSON.stringify({ resumeText }),
+    }),
 };
 
 // Settings types
@@ -335,4 +392,74 @@ export const emailApi = {
     }),
   getHistory: (limit?: number) =>
     request<ProcessedEmail[]>(`/email/history${limit ? `?limit=${limit}` : ''}`),
+  // Sync with streaming progress - uses fetch instead of EventSource to support auth headers
+  syncStream: async (onMessage: (data: { type: string; [key: string]: unknown }) => void) => {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_BASE}/email/sync-stream`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Try to refresh the session
+        const { error } = await supabase.auth.refreshSession();
+        if (!error) {
+          const newHeaders = await getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE}/email/sync-stream`, {
+            headers: newHeaders,
+          });
+          if (!retryResponse.ok) {
+            const errorData = await retryResponse.json().catch(() => ({}));
+            throw new ApiError(errorData.error || `HTTP error: ${retryResponse.status}`, retryResponse.status);
+          }
+          return processStream(retryResponse, onMessage);
+        }
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(errorData.error || `HTTP error: ${response.status}`, response.status);
+    }
+
+    return processStream(response, onMessage);
+  },
 };
+
+// Helper to process SSE stream from fetch response
+async function processStream(
+  response: Response,
+  onMessage: (data: { type: string; [key: string]: unknown }) => void
+) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new ApiError('No response body');
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE format: "data: {...}\n\n"
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || ''; // Keep incomplete message in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            onMessage(data);
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

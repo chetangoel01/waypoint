@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useProfile, useUpdateProfile, useExperiences, useEducation, useSkills, useProjects, useStories, useAiContext } from '../hooks';
+import { useProfile, useUpdateProfile, useExperiences, useEducation, useSkills, useProjects, useStories, useAiContext, useParseResume, useCreateExperience, useCreateEducation, useCreateSkill, useCreateProject } from '../hooks';
 import { Icons } from './Icons';
 import { Toast } from './Toast';
 import { Modal, ModalActions } from './Modal';
+import { ResumeParseModal, type ResumeImportSelections } from './ResumeParseModal';
+import type { ParsedResumeData } from '../services/api';
 import {
   ExperienceSection,
   EducationSection,
@@ -39,6 +41,17 @@ export function Profile() {
   // Modal states
   const [showResumePreview, setShowResumePreview] = useState(false);
   const [showAiContext, setShowAiContext] = useState(false);
+  const [showParsedResumeModal, setShowParsedResumeModal] = useState(false);
+  const [parsedResumeData, setParsedResumeData] = useState<ParsedResumeData | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Mutation hooks for importing data
+  const parseResume = useParseResume();
+  const createExperience = useCreateExperience();
+  const createEducation = useCreateEducation();
+  const createSkill = useCreateSkill();
+  const createProject = useCreateProject();
 
   // Local form state
   const [formData, setFormData] = useState({
@@ -134,6 +147,138 @@ export function Profile() {
     }
   };
 
+  // Handle parsing resume with AI
+  const handleParseWithAi = async () => {
+    if (!profile?.resume_text) {
+      setToast({ type: 'error', message: 'No resume text to parse' });
+      return;
+    }
+
+    setIsParsing(true);
+    try {
+      const result = await parseResume.mutateAsync(profile.resume_text);
+      setParsedResumeData(result);
+      setShowParsedResumeModal(true);
+    } catch (err) {
+      console.error('Resume parse error:', err);
+      setToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to parse resume with AI',
+      });
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  // Helper to normalize date strings from AI (YYYY-MM or YYYY) to full date (YYYY-MM-DD)
+  const normalizeDate = (dateStr: string | null): string | null => {
+    if (!dateStr) return null;
+    // If already full date format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr;
+    // If YYYY-MM format, add day
+    if (/^\d{4}-\d{2}$/.test(dateStr)) return `${dateStr}-01`;
+    // If just YYYY, add month and day
+    if (/^\d{4}$/.test(dateStr)) return `${dateStr}-01-01`;
+    return null;
+  };
+
+  // Handle importing parsed resume data
+  const handleImportParsedData = async (selections: ResumeImportSelections) => {
+    if (!parsedResumeData) return;
+
+    setIsImporting(true);
+    let importedCount = 0;
+
+    try {
+      // Import profile data
+      if (selections.profile) {
+        const profileUpdates: Record<string, string | null> = {};
+        if (parsedResumeData.profile.name) profileUpdates.name = parsedResumeData.profile.name;
+        if (parsedResumeData.profile.email) profileUpdates.email = parsedResumeData.profile.email;
+        if (parsedResumeData.profile.phone) profileUpdates.phone = parsedResumeData.profile.phone;
+        if (parsedResumeData.profile.location) profileUpdates.location = parsedResumeData.profile.location;
+        if (parsedResumeData.profile.linkedin_url) profileUpdates.linkedin_url = parsedResumeData.profile.linkedin_url;
+        if (parsedResumeData.profile.github_url) profileUpdates.github_url = parsedResumeData.profile.github_url;
+        if (parsedResumeData.profile.portfolio_url) profileUpdates.portfolio_url = parsedResumeData.profile.portfolio_url;
+        if (parsedResumeData.profile.career_goals) profileUpdates.career_goals = parsedResumeData.profile.career_goals;
+
+        if (Object.keys(profileUpdates).length > 0) {
+          await updateProfile.mutateAsync(profileUpdates);
+          importedCount++;
+        }
+      }
+
+      // Import experience
+      if (selections.experience && parsedResumeData.experience.length > 0) {
+        for (const exp of parsedResumeData.experience) {
+          await createExperience.mutateAsync({
+            company: exp.company,
+            role: exp.role,
+            start_date: normalizeDate(exp.start_date),
+            end_date: normalizeDate(exp.end_date),
+            description: exp.description,
+            achievements: exp.achievements,
+          });
+        }
+        importedCount += parsedResumeData.experience.length;
+      }
+
+      // Import education
+      if (selections.education && parsedResumeData.education.length > 0) {
+        for (const edu of parsedResumeData.education) {
+          await createEducation.mutateAsync({
+            institution: edu.institution,
+            degree: edu.degree,
+            field: edu.field,
+            start_date: normalizeDate(edu.start_date),
+            end_date: normalizeDate(edu.end_date),
+            gpa: edu.gpa,
+            coursework: null,
+          });
+        }
+        importedCount += parsedResumeData.education.length;
+      }
+
+      // Import skills
+      if (selections.skills && parsedResumeData.skills.length > 0) {
+        for (const skill of parsedResumeData.skills) {
+          await createSkill.mutateAsync({
+            category: skill.category || 'Other',
+            name: skill.name,
+            proficiency: skill.proficiency,
+          });
+        }
+        importedCount += parsedResumeData.skills.length;
+      }
+
+      // Import projects
+      if (selections.projects && parsedResumeData.projects.length > 0) {
+        for (const proj of parsedResumeData.projects) {
+          await createProject.mutateAsync({
+            name: proj.name,
+            description: proj.description,
+            technologies: proj.technologies,
+            outcomes: proj.outcomes,
+            url: proj.url,
+          });
+        }
+        importedCount += parsedResumeData.projects.length;
+      }
+
+      setToast({ type: 'success', message: `Successfully imported ${importedCount} items from resume` });
+      setShowParsedResumeModal(false);
+      setParsedResumeData(null);
+    } catch (err) {
+      console.error('Import error:', err);
+      setToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to import some data',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className={styles.mainInner}>
@@ -214,7 +359,27 @@ export function Profile() {
                 <p className={styles.fileName}>{resumeFile.name}</p>
                 <p className={styles.fileDate}>{resumeFile.date}</p>
               </div>
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={handleParseWithAi}
+                  disabled={isParsing || !profile?.resume_text}
+                  title="Use AI to extract structured data from your resume"
+                >
+                  {isParsing ? (
+                    <>
+                      <span className={styles.buttonIcon} style={{ animation: 'spin 1s linear infinite' }}>
+                        <Icons.Loader />
+                      </span>
+                      Parsing...
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.buttonIcon}><Icons.Brain /></span>
+                      Parse with AI
+                    </>
+                  )}
+                </button>
                 <button
                   className={`${styles.button} ${styles.buttonSecondary}`}
                   onClick={() => setShowResumePreview(true)}
@@ -472,6 +637,18 @@ export function Profile() {
         skillsByCategory={skillsByCategory}
         projects={projects}
         stories={stories}
+      />
+
+      {/* Resume Parse Modal */}
+      <ResumeParseModal
+        isOpen={showParsedResumeModal}
+        onClose={() => {
+          setShowParsedResumeModal(false);
+          setParsedResumeData(null);
+        }}
+        parsedData={parsedResumeData}
+        onConfirm={handleImportParsedData}
+        isImporting={isImporting}
       />
     </div>
   );
