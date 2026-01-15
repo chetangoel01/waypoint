@@ -1,4 +1,57 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { logger } from '../utils/logger.js';
+import config from '../config/index.js';
+
+// Error messages that are safe to expose to clients
+const SAFE_ERROR_PATTERNS = [
+  /not found/i,
+  /not connected/i,
+  /not configured/i,
+  /invalid/i,
+  /required/i,
+  /missing/i,
+  /unauthorized/i,
+  /forbidden/i,
+  /already exists/i,
+];
+
+// Sanitize error message for client response
+function sanitizeErrorMessage(err: Error, status: number): string {
+  // In development, show full errors
+  if (config.isDevelopment) {
+    return err.message;
+  }
+
+  // ApiErrors are intentionally thrown with safe messages
+  if (err.name === 'ApiError') {
+    return err.message;
+  }
+
+  // Check if error message matches safe patterns
+  const isSafeMessage = SAFE_ERROR_PATTERNS.some((pattern) =>
+    pattern.test(err.message)
+  );
+
+  if (isSafeMessage) {
+    return err.message;
+  }
+
+  // Return generic message based on status code
+  switch (status) {
+    case 400:
+      return 'Invalid request';
+    case 401:
+      return 'Authentication required';
+    case 403:
+      return 'Access denied';
+    case 404:
+      return 'Resource not found';
+    case 429:
+      return 'Too many requests';
+    default:
+      return 'An unexpected error occurred';
+  }
+}
 
 // Wrapped API response types
 export interface ApiResponse<T> {
@@ -60,10 +113,22 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  console.error('Error:', err.message);
-
   const status = err instanceof ApiError ? err.status : 500;
-  const message = err.message || 'Internal server error';
 
-  res.status(status).json(error(message));
+  // Log full error details server-side (not exposed to client)
+  logger.error(
+    {
+      err: {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      },
+      status,
+    },
+    'Request error'
+  );
+
+  // Send sanitized error message to client
+  const clientMessage = sanitizeErrorMessage(err, status);
+  res.status(status).json(error(clientMessage));
 };
