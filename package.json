@@ -23,6 +23,7 @@
     "package": "npm run package --workspace=electron",
     "db:init": "npm run db:init --workspace=server",
     "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf node_modules client/node_modules server/node_modules electron/node_modules client/dist server/dist electron/dist"
   },
