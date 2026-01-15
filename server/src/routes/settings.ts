@@ -1,5 +1,7 @@
 import { Router, Response } from 'express';
 import { asyncHandler, success } from '../middleware/response.js';
+import { validateBody } from '../middleware/validate.js';
+import { saveApiKeySchema, updateStatusesSchema } from '../schemas/index.js';
 import { AuthRequest } from '../middleware/auth.js';
 import {
   Settings,
@@ -66,23 +68,9 @@ router.get(
 // PUT /api/settings/api-key - set OpenAI API key
 router.put(
   '/api-key',
+  validateBody(saveApiKeySchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { apiKey } = req.body;
-
-    if (!apiKey || typeof apiKey !== 'string') {
-      res.status(400).json({ success: false, data: null, error: 'apiKey is required' });
-      return;
-    }
-
-    // Basic validation - OpenAI API keys start with "sk-"
-    if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
-      res.status(400).json({
-        success: false,
-        data: null,
-        error: 'Invalid API key format. OpenAI API keys start with "sk-".',
-      });
-      return;
-    }
 
     const settingsHelper = createSettingsHelper(req.supabase!);
     await settingsHelper.setApiKey(apiKey);
@@ -120,32 +108,19 @@ router.get(
 router.put(
   '/statuses',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { statuses } = req.body;
-
-    if (!Array.isArray(statuses) || statuses.length === 0) {
-      res
-        .status(400)
-        .json({ success: false, data: null, error: 'statuses must be a non-empty array' });
+    // Validate the statuses array from the request body
+    const result = updateStatusesSchema.safeParse(req.body.statuses);
+    if (!result.success) {
+      const message = result.error.issues
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      res.status(400).json({ success: false, data: null, error: message });
       return;
     }
 
-    // Validate each status
-    const validColors = ['gray', 'blue', 'amber', 'green', 'red'];
-    for (const status of statuses) {
-      if (!status.key || !status.label) {
-        res
-          .status(400)
-          .json({ success: false, data: null, error: 'Each status must have a key and label' });
-        return;
-      }
-      if (status.color && !validColors.includes(status.color)) {
-        status.color = 'gray'; // Default to gray if invalid
-      }
-    }
-
     const settingsHelper = createSettingsHelper(req.supabase!);
-    await settingsHelper.setStatusOptions(statuses as StatusOption[]);
-    res.json(success(statuses));
+    await settingsHelper.setStatusOptions(result.data as StatusOption[]);
+    res.json(success(result.data));
   })
 );
 

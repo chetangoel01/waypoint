@@ -1,8 +1,25 @@
+import crypto from 'crypto';
 import { google } from 'googleapis';
 import { SupabaseClient } from '@supabase/supabase-js';
 import config from '../config/index.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
+const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+// In-memory store for OAuth state tokens (could use Redis in production)
+const oauthStateStore = new Map<string, { userId: string; expiresAt: number }>();
+
+// Clean up expired states periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [state, data] of oauthStateStore.entries()) {
+    if (data.expiresAt < now) {
+      oauthStateStore.delete(state);
+    }
+  }
+}, 60 * 1000); // Clean up every minute
+
 const REDIRECT_URI = `${config.serverUrl}/api/email/callback`;
 const PROVIDER = 'google_gmail';
 
@@ -28,15 +45,44 @@ function getOAuth2Client() {
   );
 }
 
+// Generate a cryptographically random state token and store the user mapping
+function generateStateToken(userId: string): string {
+  const state = crypto.randomBytes(32).toString('hex');
+  oauthStateStore.set(state, {
+    userId,
+    expiresAt: Date.now() + STATE_EXPIRY_MS,
+  });
+  return state;
+}
+
+// Validate state token and return the associated user ID
+export function validateStateToken(state: string): string | null {
+  const data = oauthStateStore.get(state);
+  if (!data) {
+    return null;
+  }
+
+  // Check if expired
+  if (data.expiresAt < Date.now()) {
+    oauthStateStore.delete(state);
+    return null;
+  }
+
+  // Delete after use (one-time use)
+  oauthStateStore.delete(state);
+  return data.userId;
+}
+
 // Generate the OAuth URL for user authorization
 export function getAuthUrl(userId: string): string {
   const oauth2Client = getOAuth2Client();
+  const state = generateStateToken(userId);
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent', // Force consent to get refresh token
-    state: userId, // Pass user ID in state to associate tokens with user
+    state, // Cryptographically random state token
   });
 }
 
@@ -54,13 +100,17 @@ export async function exchangeCode(
     throw new Error('Failed to get tokens from Google');
   }
 
-  // Save tokens to oauth_tokens table
+  // Encrypt tokens before storing
+  const encryptedAccessToken = encrypt(tokens.access_token);
+  const encryptedRefreshToken = encrypt(tokens.refresh_token);
+
+  // Save encrypted tokens to oauth_tokens table
   const { error } = await supabase.from('oauth_tokens').upsert(
     {
       user_id: userId,
       provider: PROVIDER,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      access_token: encryptedAccessToken,
+      refresh_token: encryptedRefreshToken,
       expires_at: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
       scopes: SCOPES,
       metadata: {},
@@ -69,7 +119,7 @@ export async function exchangeCode(
   );
 
   if (error) {
-    throw new Error(`Failed to save Gmail tokens: ${error.message}`);
+    throw new Error('Failed to save Gmail connection');
   }
 
   // Get and save user email in metadata
@@ -88,7 +138,7 @@ export async function exchangeCode(
   }
 }
 
-// Get stored tokens for a user
+// Get stored tokens for a user (decrypts them)
 async function getStoredTokens(
   supabase: SupabaseClient,
   userId: string
@@ -109,9 +159,13 @@ async function getStoredTokens(
     return null;
   }
 
+  // Decrypt tokens (handles legacy unencrypted tokens gracefully)
+  const accessToken = decrypt(data.access_token);
+  const refreshToken = decrypt(data.refresh_token);
+
   return {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    accessToken,
+    refreshToken,
     expiresAt: data.expires_at ? new Date(data.expires_at) : null,
     email: data.metadata?.email,
   };
@@ -124,7 +178,7 @@ async function refreshAccessToken(
 ): Promise<string> {
   const tokens = await getStoredTokens(supabase, userId);
   if (!tokens) {
-    throw new Error('No Gmail tokens stored');
+    throw new Error('Gmail not connected');
   }
 
   const oauth2Client = getOAuth2Client();
@@ -135,14 +189,15 @@ async function refreshAccessToken(
   const { credentials } = await oauth2Client.refreshAccessToken();
 
   if (!credentials.access_token) {
-    throw new Error('Failed to refresh access token');
+    throw new Error('Failed to refresh Gmail access');
   }
 
-  // Update stored tokens
+  // Encrypt and update stored access token
+  const encryptedAccessToken = encrypt(credentials.access_token);
   await supabase
     .from('oauth_tokens')
     .update({
-      access_token: credentials.access_token,
+      access_token: encryptedAccessToken,
       expires_at: credentials.expiry_date
         ? new Date(credentials.expiry_date).toISOString()
         : null,
@@ -214,7 +269,7 @@ export async function disconnect(
     .eq('provider', PROVIDER);
 
   if (error) {
-    throw new Error(`Failed to disconnect Gmail: ${error.message}`);
+    throw new Error('Failed to disconnect Gmail');
   }
 }
 

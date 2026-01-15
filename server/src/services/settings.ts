@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { encrypt, decrypt, isEncryptionEnabled } from '../utils/crypto.js';
+import { logger } from '../utils/logger.js';
 
 // Get a setting by key
 export async function getSetting(
@@ -112,7 +113,7 @@ export function createSettingsHelper(supabase: SupabaseClient) {
       try {
         return decrypt(encryptedKey);
       } catch (err) {
-        console.error('Failed to decrypt API key:', err);
+        logger.error({ err }, 'Failed to decrypt API key');
         return null;
       }
     },

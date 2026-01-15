@@ -8,6 +8,17 @@ import type { StatusOption } from '../services/api';
 
 const colorOptions: StatusOption['color'][] = ['gray', 'blue', 'amber', 'green', 'red'];
 
+const getStatusColorClass = (color: StatusOption['color']): string => {
+  const colorClasses: Record<StatusOption['color'], string> = {
+    gray: styles.statusGray,
+    blue: styles.statusBlue,
+    amber: styles.statusAmber,
+    green: styles.statusGreen,
+    red: styles.statusRed,
+  };
+  return colorClasses[color] || styles.statusGray;
+};
+
 export function Settings() {
   const { data: aiStatus, isLoading, refetch } = useAiStatus();
   const saveApiKey = useSaveApiKey();
@@ -126,10 +137,7 @@ export function Settings() {
             <label className={styles.formLabel}>Status</label>
             <div>
               {isLoading ? (
-                <span className={styles.statusBadge} style={{ 
-                  backgroundColor: 'var(--color-bg-subtle)', 
-                  color: 'var(--color-ink-muted)' 
-                }}>
+                <span className={`${styles.statusBadge} ${styles.statusSaved}`}>
                   Checking...
                 </span>
               ) : aiStatus?.configured ? (
@@ -150,19 +158,9 @@ export function Settings() {
           {aiStatus?.source === 'env' ? (
             <div className={styles.formGroup}>
               <p className={styles.formHint}>
-                API key loaded from <code style={{ 
-                  backgroundColor: 'var(--color-bg-subtle)', 
-                  padding: '2px 6px', 
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: 'var(--text-xs)'
-                }}>OPENAI_API_KEY</code> environment variable.
+                API key loaded from <code className={styles.settingsCode}>OPENAI_API_KEY</code> environment variable.
                 <br />
-                To change it, update your <code style={{ 
-                  backgroundColor: 'var(--color-bg-subtle)', 
-                  padding: '2px 6px', 
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: 'var(--text-xs)'
-                }}>.env</code> file and restart the server.
+                To change it, update your <code className={styles.settingsCode}>.env</code> file and restart the server.
               </p>
             </div>
           ) : (
@@ -172,23 +170,30 @@ export function Settings() {
                 <label className={styles.formLabel}>OpenAI API Key</label>
                 <p className={styles.formHint}>
                   Required for AI-powered content generation.{' '}
-                  <a 
-                    href="https://platform.openai.com/api-keys" 
-                    target="_blank" 
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className={styles.sectionLink}
                   >
                     Get your API key <Icons.ExternalLink />
                   </a>
                 </p>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', maxWidth: '500px', marginTop: 'var(--space-3)' }}>
-                  <input 
-                    type="password" 
+                <p className={`${styles.formHint} ${styles.settingsHintSpaced}`}>
+                  Your key is stored securely in the database and persists across sessions.
+                  {aiStatus?.configured && !aiStatus.encrypted && aiStatus.source === 'database' && (
+                    <span className={styles.settingsWarning}>
+                      Note: Set ENCRYPTION_KEY in your server environment for encrypted storage.
+                    </span>
+                  )}
+                </p>
+                <div className={styles.settingsApiKeyRow}>
+                  <input
+                    type="password"
                     placeholder={aiStatus?.configured ? "Enter new key to replace" : "Paste your API key"}
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
-                    style={{ flex: 1 }}
                   />
                   <button 
                     className={`${styles.button} ${styles.buttonPrimary}`}
@@ -218,39 +223,39 @@ export function Settings() {
 
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>Application Statuses</h2>
-          <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
+          <p className={`${styles.formHint} ${styles.settingsHintBottom}`}>
             Customize the status options for tracking applications
           </p>
           
           {editingStatuses ? (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+              <div className={styles.settingsStatusList}>
                 {editingStatuses.map((status) => (
-                  <div key={status.key} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <div key={status.key} className={styles.settingsStatusRow}>
                     <input
                       type="text"
                       value={status.label}
                       onChange={(e) => handleUpdateStatus(status.key, 'label', e.target.value)}
-                      style={{ flex: 1, maxWidth: 200 }}
+                      className={styles.settingsStatusInput}
                     />
                     <select
                       value={status.color}
                       onChange={(e) => handleUpdateStatus(status.key, 'color', e.target.value)}
-                      style={{ width: 100 }}
+                      className={styles.settingsStatusSelect}
                     >
                       {colorOptions.map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', width: 100 }}>
+                    <span className={styles.settingsStatusKey}>
                       {status.key}
                     </span>
                     <button
                       onClick={() => handleRemoveStatus(status.key)}
-                      style={{ color: 'var(--color-rose)', padding: 'var(--space-1)' }}
+                      className={styles.settingsDeleteBtn}
                       title="Remove"
                     >
-                      <span style={{ width: 16, height: 16, display: 'flex', transform: 'rotate(45deg)' }}>
+                      <span className={styles.settingsDeleteIcon}>
                         <Icons.Plus />
                       </span>
                     </button>
@@ -259,34 +264,33 @@ export function Settings() {
               </div>
               
               {/* Add new status */}
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)' }}>
+              <div className={styles.settingsAddRow}>
                 <input
                   type="text"
                   placeholder="Label"
                   value={newStatus.label}
                   onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value, key: e.target.value })}
-                  style={{ flex: 1, maxWidth: 200 }}
+                  className={styles.settingsStatusInput}
                 />
                 <select
                   value={newStatus.color}
                   onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as StatusOption['color'] })}
-                  style={{ width: 100 }}
+                  className={styles.settingsStatusSelect}
                 >
                   {colorOptions.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
                 <button
-                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSmall}`}
                   onClick={handleAddStatus}
                   disabled={!newStatus.label.trim()}
-                  style={{ padding: 'var(--space-1) var(--space-3)' }}
                 >
                   Add
                 </button>
               </div>
               
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <div className={styles.settingsActions}>
                 <button
                   className={`${styles.button} ${styles.buttonPrimary}`}
                   onClick={handleSaveStatuses}
@@ -301,10 +305,9 @@ export function Settings() {
                   Cancel
                 </button>
                 <button
-                  className={styles.buttonLink}
+                  className={`${styles.buttonLink} ${styles.settingsActionsRight}`}
                   onClick={handleResetStatuses}
                   disabled={resetStatuses.isPending}
-                  style={{ marginLeft: 'auto' }}
                 >
                   Reset to defaults
                 </button>
@@ -312,23 +315,11 @@ export function Settings() {
             </>
           ) : (
             <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+              <div className={styles.settingsStatusBadges}>
                 {statusOptions?.map((status) => (
                   <span
                     key={status.key}
-                    className={styles.statusBadge}
-                    style={{
-                      backgroundColor: status.color === 'gray' ? 'var(--color-bg-subtle)' :
-                                       status.color === 'blue' ? 'var(--color-sky-light)' :
-                                       status.color === 'amber' ? 'var(--color-honey-light)' :
-                                       status.color === 'green' ? 'var(--color-sage-light)' :
-                                       'var(--color-rose-light)',
-                      color: status.color === 'gray' ? 'var(--color-ink-muted)' :
-                             status.color === 'blue' ? 'var(--color-sky)' :
-                             status.color === 'amber' ? 'var(--color-honey)' :
-                             status.color === 'green' ? 'var(--color-sage)' :
-                             'var(--color-rose)',
-                    }}
+                    className={`${styles.statusBadge} ${getStatusColorClass(status.color)}`}
                   >
                     {status.label}
                   </span>
@@ -351,7 +342,7 @@ export function Settings() {
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Export Your Data</label>
             <p className={styles.formHint}>Download all your data as a JSON file</p>
-            <button className={`${styles.button} ${styles.buttonSecondary}`} style={{ marginTop: 'var(--space-2)' }}>
+            <button className={`${styles.button} ${styles.buttonSecondary} ${styles.settingsExportBtn}`}>
               Export to JSON
             </button>
           </div>

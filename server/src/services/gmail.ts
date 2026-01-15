@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getGmailClient } from './gmail-oauth.js';
+import { logger } from '../utils/logger.js';
 import type { GmailMessage } from '../types/index.js';
 
 // Fetch recent emails from Gmail
@@ -46,7 +47,7 @@ export async function fetchRecentEmails(
         emails.push(email);
       }
     } catch (error) {
-      console.error(`Failed to fetch message ${msg.id}:`, error);
+      logger.warn({ messageId: msg.id, error }, 'Failed to fetch Gmail message');
     }
   }
 

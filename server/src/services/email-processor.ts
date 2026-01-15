@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSettingsHelper } from './settings.js';
+import { logger } from '../utils/logger.js';
 import type {
   EmailClassification,
   ExtractedJobInfo,
@@ -77,7 +78,7 @@ ${email.body.slice(0, 1500)}`;
       reason: result.reason ?? 'Unknown',
     };
   } catch (error) {
-    console.error('Failed to classify email:', error);
+    logger.warn({ error, emailSubject: email.subject }, 'Failed to classify email');
     return {
       isJobRelated: false,
       confidence: 0,
@@ -152,7 +153,7 @@ ${email.body.slice(0, 3000)}`;
       jobDescription: result.jobDescription || undefined,
     };
   } catch (error) {
-    console.error('Failed to extract job info:', error);
+    logger.warn({ error, emailSubject: email.subject }, 'Failed to extract job info');
     return null;
   }
 }

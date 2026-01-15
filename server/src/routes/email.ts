@@ -67,24 +67,31 @@ emailCallbackRouter.get(
       );
     }
 
-    // State contains the user ID
-    const userId = state as string;
+    // Validate state token and get associated user ID
+    const stateToken = state as string;
+    if (!stateToken) {
+      return res.redirect(
+        `${config.clientUrl}/settings?email_error=Missing state parameter`
+      );
+    }
+
+    const userId = gmailOAuth.validateStateToken(stateToken);
     if (!userId) {
       return res.redirect(
-        `${config.clientUrl}/settings?email_error=Invalid state parameter`
+        `${config.clientUrl}/settings?email_error=Invalid or expired state parameter`
       );
     }
 
     try {
       // Use service-level Supabase client (bypasses RLS, which is fine since we
-      // verified the user ID via the OAuth state parameter set during auth initiation)
+      // verified the user ID via the validated OAuth state token)
       await gmailOAuth.exchangeCode(supabase, userId, code);
       // Redirect to settings page with success
       res.redirect(`${config.clientUrl}/settings?email_connected=true`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to connect Gmail';
+      // Don't expose internal error details
       res.redirect(
-        `${config.clientUrl}/settings?email_error=${encodeURIComponent(message)}`
+        `${config.clientUrl}/settings?email_error=Failed to connect Gmail`
       );
     }
   })

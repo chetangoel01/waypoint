@@ -6,6 +6,7 @@ import {
   useGetAuthUrl,
   useDisconnectEmail,
 } from '../hooks';
+import { emailApi } from '../services/api';
 import { Icons } from './Icons';
 import styles from '../App.module.css';
 import type { SyncProgress, SyncResult } from '../types';
@@ -59,26 +60,22 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
     }
   };
 
-  const handleSync = () => {
+  const handleSync = async () => {
     setIsSyncing(true);
     setSyncProgress({ stage: 'fetching', message: 'Starting sync...', current: 0, total: 0 });
 
-    const eventSource = new EventSource('/api/email/sync-stream');
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
+    try {
+      await emailApi.syncStream((data) => {
         if (data.type === 'progress') {
           setSyncProgress({
-            stage: data.stage,
-            message: data.message,
-            current: data.current,
-            total: data.total,
-            emailSubject: data.emailSubject,
+            stage: data.stage as SyncProgress['stage'],
+            message: data.message as string,
+            current: data.current as number,
+            total: data.total as number,
+            emailSubject: data.emailSubject as string | undefined,
           });
         } else if (data.type === 'result') {
-          const result = data as SyncResult & { type: string };
+          const result = data as unknown as SyncResult & { type: string };
           const message =
             result.newApplications > 0 || result.updatedApplications > 0
               ? `Created ${result.newApplications} new applications, updated ${result.updatedApplications}.`
@@ -88,26 +85,22 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
           queryClient.invalidateQueries({ queryKey: ['email'] });
           queryClient.invalidateQueries({ queryKey: ['applications'] });
           refetch();
-          eventSource.close();
           setIsSyncing(false);
           setSyncProgress(null);
         } else if (data.type === 'error') {
-          onToast({ type: 'error', message: data.message });
-          eventSource.close();
+          onToast({ type: 'error', message: data.message as string });
           setIsSyncing(false);
           setSyncProgress(null);
         }
-      } catch {
-        // Ignore parse errors
-      }
-    };
-
-    eventSource.onerror = () => {
-      onToast({ type: 'error', message: 'Connection lost during sync' });
-      eventSource.close();
+      });
+    } catch (err) {
+      onToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Sync failed',
+      });
       setIsSyncing(false);
       setSyncProgress(null);
-    };
+    }
   };
 
   const handleDisconnect = async () => {
