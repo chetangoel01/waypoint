@@ -1,19 +1,37 @@
-import { Router, Response, NextFunction } from 'express';
-import { success } from '../middleware/response.js';
+import { Router, Response } from 'express';
+import { z } from 'zod';
+import { success, asyncHandler } from '../middleware/response.js';
+import { validateBody } from '../middleware/validate.js';
+import { parseResumeSchema } from '../schemas/index.js';
 import { AuthRequest } from '../middleware/auth.js';
 import * as aiService from '../services/ai.js';
 
 const router = Router();
 
-// POST /api/generate/cover-letter
-router.post('/cover-letter', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { applicationId, additionalContext, tone } = req.body;
+// Schemas for generate endpoints
+const coverLetterSchema = z.object({
+  applicationId: z.number().int().positive('applicationId is required'),
+  additionalContext: z.string().max(5000).optional(),
+  tone: z.string().max(50).optional(),
+});
 
-    if (!applicationId) {
-      res.status(400).json({ success: false, data: null, error: 'applicationId is required' });
-      return;
-    }
+const customResponseSchema = z.object({
+  applicationId: z.number().int().positive('applicationId is required'),
+  question: z.string().min(1, 'question is required').max(2000),
+  maxLength: z.number().int().positive().max(5000).optional(),
+});
+
+const refineSchema = z.object({
+  content: z.string().min(1, 'content is required').max(50000),
+  instruction: z.string().min(1, 'instruction is required').max(2000),
+});
+
+// POST /api/generate/cover-letter
+router.post(
+  '/cover-letter',
+  validateBody(coverLetterSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { applicationId, additionalContext, tone } = req.body;
 
     const result = await aiService.generateCoverLetter(req.supabase!, {
       applicationId,
@@ -22,25 +40,15 @@ router.post('/cover-letter', async (req: AuthRequest, res: Response, next: NextF
     });
 
     res.json(success(result));
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
 // POST /api/generate/custom-response
-router.post('/custom-response', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+router.post(
+  '/custom-response',
+  validateBody(customResponseSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { applicationId, question, maxLength } = req.body;
-
-    if (!applicationId) {
-      res.status(400).json({ success: false, data: null, error: 'applicationId is required' });
-      return;
-    }
-
-    if (!question) {
-      res.status(400).json({ success: false, data: null, error: 'question is required' });
-      return;
-    }
 
     const result = await aiService.generateCustomResponse(req.supabase!, {
       applicationId,
@@ -49,25 +57,15 @@ router.post('/custom-response', async (req: AuthRequest, res: Response, next: Ne
     });
 
     res.json(success(result));
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
 // POST /api/generate/refine
-router.post('/refine', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+router.post(
+  '/refine',
+  validateBody(refineSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { content, instruction } = req.body;
-
-    if (!content) {
-      res.status(400).json({ success: false, data: null, error: 'content is required' });
-      return;
-    }
-
-    if (!instruction) {
-      res.status(400).json({ success: false, data: null, error: 'instruction is required' });
-      return;
-    }
 
     const result = await aiService.refineContent(req.supabase!, {
       content,
@@ -75,10 +73,8 @@ router.post('/refine', async (req: AuthRequest, res: Response, next: NextFunctio
     });
 
     res.json(success(result));
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
 // GET /api/generate/status - check if AI is configured
 router.get('/status', async (req: AuthRequest, res: Response) => {
@@ -89,13 +85,24 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/generate/context - get the applicant context that would be sent to AI
-router.get('/context', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+router.get(
+  '/context',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const context = await aiService.getApplicantContext(req.supabase!);
     res.json(success({ context }));
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
+
+// POST /api/generate/parse-resume - parse resume text and extract structured data
+router.post(
+  '/parse-resume',
+  validateBody(parseResumeSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { resumeText } = req.body;
+
+    const result = await aiService.parseResume(req.supabase!, resumeText);
+    res.json(success(result));
+  })
+);
 
 export default router;

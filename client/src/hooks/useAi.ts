@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { generateApi, settingsApi, type CoverLetterTone, type StatusOption } from '../services/api';
+import { generateApi, settingsApi, type CoverLetterTone, type StatusOption, type ParsedResumeData } from '../services/api';
 
 // Query keys
 export const aiKeys = {
@@ -126,5 +126,12 @@ export function useResetStatuses() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...settingsKeys.all, 'statuses'] });
     },
+  });
+}
+
+// Parse resume and extract structured data
+export function useParseResume() {
+  return useMutation({
+    mutationFn: (resumeText: string) => generateApi.parseResume(resumeText),
   });
 }

@@ -355,3 +355,176 @@ export async function isAiConfigured(supabase: SupabaseClient): Promise<boolean>
 export async function getApplicantContext(supabase: SupabaseClient): Promise<string> {
   return buildApplicantContext(supabase);
 }
+
+// Types for parsed resume data
+export interface ParsedResumeData {
+  profile: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    location: string | null;
+    linkedin_url: string | null;
+    github_url: string | null;
+    portfolio_url: string | null;
+    career_goals: string | null;
+  };
+  experience: Array<{
+    company: string;
+    role: string;
+    start_date: string | null;
+    end_date: string | null;
+    description: string | null;
+    achievements: string[];
+  }>;
+  education: Array<{
+    institution: string;
+    degree: string;
+    field: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    gpa: number | null;
+  }>;
+  skills: Array<{
+    category: string;
+    name: string;
+    proficiency: string | null;
+  }>;
+  projects: Array<{
+    name: string;
+    description: string | null;
+    technologies: string[];
+    outcomes: string | null;
+    url: string | null;
+  }>;
+}
+
+// Parse resume text and extract structured data
+export async function parseResume(
+  supabase: SupabaseClient,
+  resumeText: string
+): Promise<ParsedResumeData> {
+  const openai = await getOpenAIClient(supabase);
+
+  const systemPrompt = `You are an expert resume parser. Your task is to extract structured information from resume text.
+
+Extract the following information and return it as valid JSON:
+1. Profile information (name, email, phone, location, linkedin URL, github URL, portfolio URL, career goals/summary)
+2. Work experience (company, role, dates, description, achievements)
+3. Education (institution, degree, field of study, dates, GPA if mentioned)
+4. Skills (categorized by type like "Programming Languages", "Frameworks", "Tools", etc.)
+5. Projects (name, description, technologies used, outcomes/impact, URL if any)
+
+Guidelines:
+- For dates, use format "YYYY-MM" or "YYYY" when only year is known. Use null if not specified.
+- For achievements, extract specific bullet points or accomplishments.
+- Infer skill categories from context (e.g., Python goes under "Programming Languages")
+- If information is not present, use null for optional fields or empty arrays for lists.
+- Be thorough but only extract information that is actually present in the resume.`;
+
+  const userPrompt = `Please parse the following resume and extract structured data:
+
+${resumeText}
+
+Return the data as a JSON object with this exact structure:
+{
+  "profile": {
+    "name": "string or null",
+    "email": "string or null",
+    "phone": "string or null",
+    "location": "string or null",
+    "linkedin_url": "string or null",
+    "github_url": "string or null",
+    "portfolio_url": "string or null",
+    "career_goals": "string or null (extract from summary/objective section)"
+  },
+  "experience": [
+    {
+      "company": "string",
+      "role": "string",
+      "start_date": "YYYY-MM or YYYY or null",
+      "end_date": "YYYY-MM or YYYY or null (null if current)",
+      "description": "string or null",
+      "achievements": ["array of achievement strings"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "string",
+      "degree": "string (e.g., Bachelor of Science, MBA)",
+      "field": "string or null (e.g., Computer Science)",
+      "start_date": "YYYY-MM or YYYY or null",
+      "end_date": "YYYY-MM or YYYY or null",
+      "gpa": number or null
+    }
+  ],
+  "skills": [
+    {
+      "category": "string (e.g., Programming Languages, Frameworks, Tools)",
+      "name": "string",
+      "proficiency": "string or null (e.g., Expert, Intermediate, Beginner)"
+    }
+  ],
+  "projects": [
+    {
+      "name": "string",
+      "description": "string or null",
+      "technologies": ["array of technology strings"],
+      "outcomes": "string or null (quantifiable results if any)",
+      "url": "string or null"
+    }
+  ]
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.3, // Lower temperature for more consistent parsing
+    max_tokens: 4000,
+    response_format: { type: 'json_object' },
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+
+  try {
+    const parsed = JSON.parse(content) as ParsedResumeData;
+
+    // Ensure all required fields have default values
+    return {
+      profile: {
+        name: parsed.profile?.name ?? null,
+        email: parsed.profile?.email ?? null,
+        phone: parsed.profile?.phone ?? null,
+        location: parsed.profile?.location ?? null,
+        linkedin_url: parsed.profile?.linkedin_url ?? null,
+        github_url: parsed.profile?.github_url ?? null,
+        portfolio_url: parsed.profile?.portfolio_url ?? null,
+        career_goals: parsed.profile?.career_goals ?? null,
+      },
+      experience: parsed.experience ?? [],
+      education: parsed.education ?? [],
+      skills: parsed.skills ?? [],
+      projects: parsed.projects ?? [],
+    };
+  } catch {
+    // Return empty structure if parsing fails
+    return {
+      profile: {
+        name: null,
+        email: null,
+        phone: null,
+        location: null,
+        linkedin_url: null,
+        github_url: null,
+        portfolio_url: null,
+        career_goals: null,
+      },
+      experience: [],
+      education: [],
+      skills: [],
+      projects: [],
+    };
+  }
+}
