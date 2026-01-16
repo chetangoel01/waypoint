@@ -33,7 +33,7 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 describe('Email Processor Service', () => {
-  const mockSupabase = {} as any; // We don't need a real client since we mocked settings
+  const mockSupabase = {} as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeEach(() => {
     vi.clearAllMocks();

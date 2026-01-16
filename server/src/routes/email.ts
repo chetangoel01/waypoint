@@ -88,7 +88,7 @@ emailCallbackRouter.get(
       await gmailOAuth.exchangeCode(supabase, userId, code);
       // Redirect to settings page with success
       res.redirect(`${config.clientUrl}/settings?email_connected=true`);
-    } catch (err) {
+    } catch {
       // Don't expose internal error details
       res.redirect(
         `${config.clientUrl}/settings?email_error=Failed to connect Gmail`

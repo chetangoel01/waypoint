@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -27,7 +26,6 @@ function LoadingSpinner() {
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
 
   // Fetch profile to check if onboarding is needed
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
@@ -36,15 +34,6 @@ export default function App() {
     enabled: !!user, // Only fetch when user is logged in
     staleTime: 0, // Always check fresh
   });
-
-  // Determine onboarding status when profile loads
-  useEffect(() => {
-    if (profile) {
-      // Consider onboarding complete if user has a name set
-      const hasCompletedOnboarding = !!profile.name;
-      setOnboardingComplete(hasCompletedOnboarding);
-    }
-  }, [profile]);
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -57,18 +46,17 @@ export default function App() {
   }
 
   // Show loading while checking profile
-  if (profileLoading || onboardingComplete === null) {
+  if (profileLoading) {
     return <LoadingSpinner />;
   }
 
   // Show onboarding for new users
-  if (!onboardingComplete) {
+  if (profile && !profile.name) {
     return (
       <Onboarding
         userEmail={user.email}
         userName={user.user_metadata?.full_name || user.user_metadata?.name}
         onComplete={() => {
-          setOnboardingComplete(true);
           refetchProfile();
         }}
       />

@@ -5,6 +5,7 @@ import { Toast } from './Toast';
 import { Modal, ModalActions } from './Modal';
 import { ResumeParseModal, type ResumeImportSelections } from './ResumeParseModal';
 import type { ParsedResumeData } from '../services/api';
+import type { Profile as ProfileType, WorkExperience, Education, Skill, Project, Story } from '../types';
 import {
   ExperienceSection,
   EducationSection,
@@ -81,7 +82,7 @@ export function Profile() {
         setResumeFile({ name: 'Resume', date: 'Previously uploaded' });
       }
     }
-  }, [profile]);
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -658,12 +659,12 @@ export function Profile() {
 interface AiContextModalProps {
   isOpen: boolean;
   onClose: () => void;
-  profile: any;
-  experiences: any;
-  educationList: any;
-  skillsByCategory: any;
-  projects: any;
-  stories: any;
+  profile: ProfileType | null | undefined;
+  experiences: WorkExperience[] | null | undefined;
+  educationList: Education[] | null | undefined;
+  skillsByCategory: Record<string, Skill[]> | null | undefined;
+  projects: Project[] | null | undefined;
+  stories: Story[] | null | undefined;
 }
 
 function AiContextModal({
@@ -783,7 +784,7 @@ function AiContextModal({
             <div className={sectionStyles.previewSection}>
               <p className={sectionStyles.previewLabel}>Work Experience</p>
               <ul className={sectionStyles.previewList}>
-                {experiences.slice(0, 3).map((exp: any) => (
+                {experiences.slice(0, 3).map((exp: WorkExperience) => (
                   <li key={exp.id}>{exp.role} at {exp.company}</li>
                 ))}
                 {experiences.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{experiences.length - 3} more</li>}
@@ -796,7 +797,7 @@ function AiContextModal({
             <div className={sectionStyles.previewSection}>
               <p className={sectionStyles.previewLabel}>Education</p>
               <ul className={sectionStyles.previewList}>
-                {educationList.map((edu: any) => (
+                {educationList.map((edu: Education) => (
                   <li key={edu.id}>{edu.degree} from {edu.institution}</li>
                 ))}
               </ul>
@@ -808,7 +809,7 @@ function AiContextModal({
             <div className={sectionStyles.previewSection}>
               <p className={sectionStyles.previewLabel}>Skills</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                {Object.entries(skillsByCategory).map(([category, skills]: [string, any]) => (
+                {Object.entries(skillsByCategory).map(([category, skills]: [string, Skill[]]) => (
                   <span key={category} className={sectionStyles.entryTag}>
                     {category}: {skills.length}
                   </span>
@@ -822,7 +823,7 @@ function AiContextModal({
             <div className={sectionStyles.previewSection}>
               <p className={sectionStyles.previewLabel}>Projects</p>
               <ul className={sectionStyles.previewList}>
-                {projects.slice(0, 3).map((proj: any) => (
+                {projects.slice(0, 3).map((proj: Project) => (
                   <li key={proj.id}>{proj.name}</li>
                 ))}
                 {projects.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{projects.length - 3} more</li>}
@@ -835,7 +836,7 @@ function AiContextModal({
             <div className={sectionStyles.previewSection}>
               <p className={sectionStyles.previewLabel}>STAR Stories</p>
               <ul className={sectionStyles.previewList}>
-                {stories.slice(0, 3).map((story: any) => (
+                {stories.slice(0, 3).map((story: Story) => (
                   <li key={story.id}>{story.title}</li>
                 ))}
                 {stories.length > 3 && <li style={{ color: 'var(--color-ink-muted)' }}>+{stories.length - 3} more</li>}

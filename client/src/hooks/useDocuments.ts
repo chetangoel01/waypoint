@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '../services/api';
-import type { Document, DocumentVersion } from '../types';
+import type { Document } from '../types';
 
 // Query keys for cache management
 export const documentKeys = {

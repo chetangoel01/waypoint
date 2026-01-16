@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { applicationsApi, ApiError } from '../services/api';
+import { applicationsApi } from '../services/api';
 import type { Application } from '../types';
 
 // Query keys for cache management

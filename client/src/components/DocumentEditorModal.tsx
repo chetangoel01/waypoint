@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDocument, useAddDocumentVersion } from '../hooks';
 import { Icons } from './Icons';
 import { Modal, ModalActions } from './Modal';
@@ -25,16 +25,16 @@ export function DocumentEditorModal({
 
   const [content, setContent] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [lastVersionId, setLastVersionId] = useState<number | null>(null);
 
   // Get the latest version content when document loads
   const latestVersion = document?.versions?.[0];
 
-  useEffect(() => {
-    if (latestVersion?.content) {
-      setContent(latestVersion.content);
-      setHasChanges(false);
-    }
-  }, [latestVersion?.content]);
+  if (latestVersion && latestVersion.id !== lastVersionId) {
+    setContent(latestVersion.content);
+    setHasChanges(false);
+    setLastVersionId(latestVersion.id);
+  }
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);

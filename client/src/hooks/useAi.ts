@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { generateApi, settingsApi, type CoverLetterTone, type StatusOption, type ParsedResumeData } from '../services/api';
+import { generateApi, settingsApi, type CoverLetterTone, type StatusOption } from '../services/api';
 
 // Query keys
 export const aiKeys = {

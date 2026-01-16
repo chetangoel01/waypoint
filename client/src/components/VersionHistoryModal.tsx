@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useDocumentVersions } from '../hooks';
-import { Icons } from './Icons';
 import { Modal, ModalActions } from './Modal';
 import styles from './GenerateModal.module.css';
 import type { DocumentVersion } from '../types';

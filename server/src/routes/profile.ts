@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { asyncHandler, success, notFound } from '../middleware/response.js';
+import { asyncHandler, success } from '../middleware/response.js';
 import { AuthRequest } from '../middleware/auth.js';
 import * as profileService from '../services/profile.js';
 
