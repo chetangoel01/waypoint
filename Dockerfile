@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY client/package*.json ./client/
 COPY server/package*.json ./server/
 
