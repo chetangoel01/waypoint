@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import config from '../config/index.js';
 
 export interface AuthRequest extends Request {
@@ -7,7 +8,7 @@ export interface AuthRequest extends Request {
     id: string;
     email?: string;
   };
-  supabase?: any; // Authenticated Supabase client
+  supabase?: SupabaseClient; // Authenticated Supabase client
 }
 
 export const requireAuth = async (

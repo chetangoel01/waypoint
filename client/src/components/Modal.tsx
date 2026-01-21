@@ -75,4 +75,3 @@ export function ModalActions({ children }: ModalActionsProps) {
 }
 
 // Export modal styles for use in confirmation messages
-export { styles as modalStyles };

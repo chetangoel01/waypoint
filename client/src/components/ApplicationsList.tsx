@@ -2,8 +2,30 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApplications, useCreateApplication, useDeleteApplication } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions, modalStyles } from './Modal';
+import { Modal, ModalActions } from './Modal';
+import { modalStyles } from './modalStyles';
+import { validateForm, required, maxLength, url, combine } from '../utils/validation';
 import styles from '../App.module.css';
+
+type SortOption = 'updated' | 'applied' | 'company_asc' | 'company_desc' | 'status';
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: 'updated', label: 'Last Updated' },
+  { value: 'applied', label: 'Date Applied' },
+  { value: 'company_asc', label: 'Company (A-Z)' },
+  { value: 'company_desc', label: 'Company (Z-A)' },
+  { value: 'status', label: 'Status' },
+];
+
+const statusOrder: Record<string, number> = {
+  offer: 1,
+  interview: 2,
+  phone_screen: 3,
+  applied: 4,
+  saved: 5,
+  withdrawn: 6,
+  rejected: 7,
+};
 
 const getStatusClass = (status: string) => {
   const map: Record<string, string> = {
@@ -34,9 +56,13 @@ export function ApplicationsList() {
   const [newApp, setNewApp] = useState({ company: '', role: '', url: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; company: string } | null>(null);
 
-  // Filter state
+  // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('updated');
+
+  // Form validation state
+  const [formErrors, setFormErrors] = useState<{ company?: string; role?: string; url?: string }>({});
 
   const statusOptions = [
     { key: 'saved', label: 'Saved' },
@@ -122,14 +148,41 @@ export function ApplicationsList() {
       if (statusFilter && app.status !== statusFilter) return false;
       return true;
     })
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'applied': {
+          // Sort by date_applied (most recent first), then by date_saved
+          const dateA = a.date_applied || a.date_saved || '';
+          const dateB = b.date_applied || b.date_saved || '';
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        }
+        case 'company_asc':
+          return a.company.localeCompare(b.company);
+        case 'company_desc':
+          return b.company.localeCompare(a.company);
+        case 'status':
+          return (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+        case 'updated':
+        default:
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+    });
 
   const hasActiveFilters = searchQuery || statusFilter;
 
   const handleCreateApplication = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newApp.company.trim() || !newApp.role.trim()) return;
-    
+
+    // Validate form
+    const { valid, errors } = validateForm(newApp, {
+      company: combine(required('Company'), maxLength(255, 'Company')),
+      role: combine(required('Role'), maxLength(255, 'Role')),
+      url: url('Job URL'),
+    });
+
+    setFormErrors(errors);
+    if (!valid) return;
+
     try {
       const created = await createApplication.mutateAsync({
         company: newApp.company.trim(),
@@ -145,6 +198,7 @@ export function ApplicationsList() {
       });
       setIsCreateModalOpen(false);
       setNewApp({ company: '', role: '', url: '' });
+      setFormErrors({});
       navigate(`/applications/${created.id}`);
     } catch {
       // Error handled by mutation
@@ -199,41 +253,69 @@ export function ApplicationsList() {
               />
             </div>
 
-            {/* Status Filter Pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-              <button
-                onClick={() => setStatusFilter(null)}
-                style={{
-                  padding: 'var(--space-1) var(--space-3)',
-                  borderRadius: '9999px',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: statusFilter === null ? 600 : 400,
-                  backgroundColor: statusFilter === null ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
-                  color: statusFilter === null ? 'white' : 'var(--color-ink-muted)',
-                  border: '1px solid transparent',
-                  transition: 'all var(--duration-fast) var(--ease-out)',
-                }}
-              >
-                All
-              </button>
-              {statusOptions.map((status) => (
+            {/* Status Filter Pills + Sort */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                 <button
-                  key={status.key}
-                  onClick={() => setStatusFilter(statusFilter === status.key ? null : status.key)}
+                  onClick={() => setStatusFilter(null)}
                   style={{
                     padding: 'var(--space-1) var(--space-3)',
                     borderRadius: '9999px',
                     fontSize: 'var(--text-sm)',
-                    fontWeight: statusFilter === status.key ? 600 : 400,
-                    backgroundColor: statusFilter === status.key ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
-                    color: statusFilter === status.key ? 'white' : 'var(--color-ink-muted)',
+                    fontWeight: statusFilter === null ? 600 : 400,
+                    backgroundColor: statusFilter === null ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                    color: statusFilter === null ? 'white' : 'var(--color-ink-muted)',
                     border: '1px solid transparent',
                     transition: 'all var(--duration-fast) var(--ease-out)',
                   }}
                 >
-                  {status.label}
+                  All
                 </button>
-              ))}
+                {statusOptions.map((status) => (
+                  <button
+                    key={status.key}
+                    onClick={() => setStatusFilter(statusFilter === status.key ? null : status.key)}
+                    style={{
+                      padding: 'var(--space-1) var(--space-3)',
+                      borderRadius: '9999px',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: statusFilter === status.key ? 600 : 400,
+                      backgroundColor: statusFilter === status.key ? 'var(--color-ink)' : 'var(--color-bg-subtle)',
+                      color: statusFilter === status.key ? 'white' : 'var(--color-ink-muted)',
+                      border: '1px solid transparent',
+                      transition: 'all var(--duration-fast) var(--ease-out)',
+                    }}
+                  >
+                    {status.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sort Dropdown */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <label style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)' }}>
+                  Sort by:
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  style={{
+                    padding: 'var(--space-1) var(--space-3)',
+                    fontSize: 'var(--text-sm)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg)',
+                    color: 'var(--color-ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {sortOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -348,7 +430,10 @@ export function ApplicationsList() {
       {/* Create Application Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setFormErrors({});
+        }}
         title="New Application"
         size="md"
       >
@@ -359,9 +444,18 @@ export function ApplicationsList() {
               type="text"
               placeholder="e.g., Acme Inc."
               value={newApp.company}
-              onChange={(e) => setNewApp({ ...newApp, company: e.target.value })}
+              onChange={(e) => {
+                setNewApp({ ...newApp, company: e.target.value });
+                if (formErrors.company) setFormErrors({ ...formErrors, company: undefined });
+              }}
               autoFocus
+              style={formErrors.company ? { borderColor: 'var(--color-rose)' } : undefined}
             />
+            {formErrors.company && (
+              <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                {formErrors.company}
+              </span>
+            )}
           </div>
 
           <div className={styles.formGroup}>
@@ -370,8 +464,17 @@ export function ApplicationsList() {
               type="text"
               placeholder="e.g., Senior Software Engineer"
               value={newApp.role}
-              onChange={(e) => setNewApp({ ...newApp, role: e.target.value })}
+              onChange={(e) => {
+                setNewApp({ ...newApp, role: e.target.value });
+                if (formErrors.role) setFormErrors({ ...formErrors, role: undefined });
+              }}
+              style={formErrors.role ? { borderColor: 'var(--color-rose)' } : undefined}
             />
+            {formErrors.role && (
+              <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                {formErrors.role}
+              </span>
+            )}
           </div>
 
           <div className={styles.formGroup}>
@@ -380,8 +483,17 @@ export function ApplicationsList() {
               type="url"
               placeholder="https://..."
               value={newApp.url}
-              onChange={(e) => setNewApp({ ...newApp, url: e.target.value })}
+              onChange={(e) => {
+                setNewApp({ ...newApp, url: e.target.value });
+                if (formErrors.url) setFormErrors({ ...formErrors, url: undefined });
+              }}
+              style={formErrors.url ? { borderColor: 'var(--color-rose)' } : undefined}
             />
+            {formErrors.url && (
+              <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                {formErrors.url}
+              </span>
+            )}
           </div>
 
           {createApplication.error && (
@@ -394,14 +506,17 @@ export function ApplicationsList() {
             <button
               type="button"
               className={`${styles.button} ${styles.buttonSecondary}`}
-              onClick={() => setIsCreateModalOpen(false)}
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setFormErrors({});
+              }}
             >
               Cancel
             </button>
             <button
               type="submit"
               className={`${styles.button} ${styles.buttonPrimary}`}
-              disabled={!newApp.company.trim() || !newApp.role.trim() || createApplication.isPending}
+              disabled={createApplication.isPending}
             >
               {createApplication.isPending ? 'Creating...' : 'Create Application'}
             </button>

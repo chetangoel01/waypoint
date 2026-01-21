@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useDocuments, useDeleteDocument, useApplications, useAddDocumentVersion, useAiStatus } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions, modalStyles } from './Modal';
+import { Modal, ModalActions } from './Modal';
+import { modalStyles } from './modalStyles';
 import { DocumentEditorModal } from './DocumentEditorModal';
 import { VersionHistoryModal } from './VersionHistoryModal';
 import { GenerateModal } from './GenerateModal';

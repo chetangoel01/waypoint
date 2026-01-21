@@ -3,7 +3,7 @@
 ## Project Overview
 **Name**: Waypoint (internal: application-helper)
 **Description**: A personal job application tracker with AI-powered content generation and Gmail integration.
-**Type**: Monorepo (npm workspaces) containing Client (React), Server (Express), and Electron (Shell).
+**Type**: Monorepo (npm workspaces) containing Client (React) and Server (Express).
 **Primary Data Store**: Supabase (PostgreSQL) with Row Level Security (RLS).
 
 ## Tech Stack
@@ -25,11 +25,6 @@
 - **Authentication**: Bearer Token (Supabase Session) -> Scoped DB Client
 - **AI**: OpenAI API (GPT-4o-mini)
 - **Email**: Gmail API (googleapis)
-
-### Desktop Wrapper (`/electron`)
-- **Type**: Electron wrapper around the Node.js server.
-- **Role**: Spawns the server process (in Prod) or connects to localhost (in Dev).
-- **Offline Support**: **None** (Requires active internet connection for Supabase/OpenAI).
 
 ## Architecture & Control Flow
 

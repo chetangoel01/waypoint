@@ -5,6 +5,12 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   envDir: path.resolve(__dirname, '..'),
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    css: true,
+    restoreMocks: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -16,6 +22,21 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: [
+            '@tanstack/react-query',
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ],
+          pdfjs: ['pdfjs-dist'],
+        },
       },
     },
   },

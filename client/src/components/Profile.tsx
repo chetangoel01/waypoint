@@ -4,6 +4,7 @@ import { Icons } from './Icons';
 import { Toast } from './Toast';
 import { Modal, ModalActions } from './Modal';
 import { ResumeParseModal, type ResumeImportSelections } from './ResumeParseModal';
+import { email, phone, linkedinUrl, githubUrl, maxLength } from '../utils/validation';
 import type { ParsedResumeData } from '../services/api';
 import type { Profile as ProfileType, WorkExperience, Education, Skill, Project, Story } from '../types';
 import {
@@ -16,6 +17,17 @@ import {
 import * as pdfjs from 'pdfjs-dist';
 import styles from '../App.module.css';
 import sectionStyles from './ProfileSections.module.css';
+
+// Validation rules for profile fields
+const profileValidation: Record<string, ReturnType<typeof email>> = {
+  email: email(),
+  phone: phone(),
+  linkedin_url: linkedinUrl(),
+  github_url: githubUrl(),
+  name: maxLength(255, 'Name'),
+  location: maxLength(255, 'Location'),
+  career_goals: maxLength(5000, 'Career goals'),
+};
 
 // Set up pdf.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -65,6 +77,9 @@ export function Profile() {
     career_goals: '',
   });
 
+  // Validation errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   // Sync form with loaded profile data
   useEffect(() => {
     if (profile) {
@@ -88,12 +103,28 @@ export function Profile() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    // Clear error on change
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const handleBlur = (field: keyof typeof formData) => () => {
-    if (profile && formData[field] !== (profile[field] ?? '')) {
+    const value = formData[field];
+
+    // Validate if there's a validator for this field
+    const validator = profileValidation[field];
+    if (validator) {
+      const result = validator.validate(value);
+      if (!result.valid) {
+        setFieldErrors(prev => ({ ...prev, [field]: result.error || '' }));
+        return; // Don't save invalid data
+      }
+    }
+
+    if (profile && value !== (profile[field] ?? '')) {
       updateProfile.mutate(
-        { [field]: formData[field] || null },
+        { [field]: value || null },
         {
           onSuccess: () => setToast({ type: 'success', message: 'Saved' }),
           onError: () => setToast({ type: 'error', message: 'Failed to save' }),
@@ -407,63 +438,99 @@ export function Profile() {
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Full Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Your name"
                 value={formData.name}
                 onChange={handleChange('name')}
                 onBlur={handleBlur('name')}
+                style={fieldErrors.name ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.name && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.name}
+                </span>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Email</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 placeholder="your@email.com"
                 value={formData.email}
                 onChange={handleChange('email')}
                 onBlur={handleBlur('email')}
+                style={fieldErrors.email ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.email && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.email}
+                </span>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Phone</label>
-              <input 
-                type="tel" 
+              <input
+                type="tel"
                 placeholder="+1 (555) 000-0000"
                 value={formData.phone}
                 onChange={handleChange('phone')}
                 onBlur={handleBlur('phone')}
+                style={fieldErrors.phone ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.phone && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.phone}
+                </span>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Location</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="City, State"
                 value={formData.location}
                 onChange={handleChange('location')}
                 onBlur={handleBlur('location')}
+                style={fieldErrors.location ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.location && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.location}
+                </span>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>LinkedIn</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 placeholder="linkedin.com/in/..."
                 value={formData.linkedin_url}
                 onChange={handleChange('linkedin_url')}
                 onBlur={handleBlur('linkedin_url')}
+                style={fieldErrors.linkedin_url ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.linkedin_url && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.linkedin_url}
+                </span>
+              )}
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>GitHub</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 placeholder="github.com/..."
                 value={formData.github_url}
                 onChange={handleChange('github_url')}
                 onBlur={handleBlur('github_url')}
+                style={fieldErrors.github_url ? { borderColor: 'var(--color-rose)' } : undefined}
               />
+              {fieldErrors.github_url && (
+                <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                  {fieldErrors.github_url}
+                </span>
+              )}
             </div>
           </div>
         </section>
@@ -477,11 +544,20 @@ export function Profile() {
             <textarea
               rows={4}
               placeholder="I'm seeking a senior engineering role at a product-focused company where I can..."
-              style={{ width: '100%', resize: 'vertical' }}
+              style={{
+                width: '100%',
+                resize: 'vertical',
+                borderColor: fieldErrors.career_goals ? 'var(--color-rose)' : undefined,
+              }}
               value={formData.career_goals}
               onChange={handleChange('career_goals')}
               onBlur={handleBlur('career_goals')}
             />
+            {fieldErrors.career_goals && (
+              <span style={{ color: 'var(--color-rose)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)', display: 'block' }}>
+                {fieldErrors.career_goals}
+              </span>
+            )}
           </div>
         </section>
 

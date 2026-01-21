@@ -124,49 +124,24 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
 
   return (
     <section className={styles.profileSection}>
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
       <h2 className={styles.profileSectionTitle}>Email Integration</h2>
-      <p className={styles.formHint} style={{ marginBottom: 'var(--space-4)' }}>
-        Connect your Gmail to automatically detect and track job application emails
+      <p className={`${styles.formHint} ${styles.settingsSectionIntro}`}>
+        Connect Gmail to detect and track job application emails.
       </p>
 
-      {/* Status indicator */}
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Status</label>
         <div>
           {isLoading ? (
-            <span
-              className={styles.statusBadge}
-              style={{
-                backgroundColor: 'var(--color-bg-subtle)',
-                color: 'var(--color-ink-muted)',
-              }}
-            >
-              Checking...
-            </span>
+            <span className={`${styles.statusBadge} ${styles.statusSaved}`}>Checking...</span>
           ) : emailStatus?.connected ? (
             <span className={`${styles.statusBadge} ${styles.statusOffer}`}>
               Connected {emailStatus.email && `(${emailStatus.email})`}
             </span>
           ) : emailStatus?.hasCredentials ? (
-            <span className={`${styles.statusBadge} ${styles.statusInterview}`}>
-              Ready to connect - Click Connect to authorize
-            </span>
+            <span className={`${styles.statusBadge} ${styles.statusInterview}`}>Ready to connect</span>
           ) : (
-            <span
-              className={styles.statusBadge}
-              style={{
-                backgroundColor: 'var(--color-bg-subtle)',
-                color: 'var(--color-ink-muted)',
-              }}
-            >
-              Not configured - Admin must set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET
-            </span>
+            <span className={`${styles.statusBadge} ${styles.statusSaved}`}>Not configured</span>
           )}
         </div>
       </div>
@@ -176,33 +151,19 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
         <>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Last Sync</label>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)' }}>
+            <p className={styles.settingsMetaText}>
               {formatLastSync(emailStatus.lastSync)}
             </p>
           </div>
 
           {/* Sync Progress */}
           {isSyncing && syncProgress && (
-            <div
-              style={{
-                backgroundColor: 'var(--color-bg-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-4)',
-                marginTop: 'var(--space-4)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    display: 'flex',
-                    animation: 'spin 1s linear infinite',
-                  }}
-                >
+            <div className={styles.settingsProgressCard}>
+              <div className={styles.settingsProgressRow}>
+                <span className={styles.settingsSpinner}>
                   <Icons.Loader />
                 </span>
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                <span className={styles.settingsProgressTitle}>
                   {syncProgress.stage === 'fetching' && 'Fetching emails...'}
                   {syncProgress.stage === 'processing' && 'Analyzing emails...'}
                   {syncProgress.stage === 'saving' && 'Saving application...'}
@@ -211,48 +172,27 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
                 </span>
               </div>
 
-              {/* Progress bar */}
               {syncProgress.total > 0 && (
-                <div
-                  style={{
-                    height: 6,
-                    backgroundColor: 'var(--color-border)',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                    marginBottom: 'var(--space-2)',
-                  }}
-                >
+                <div className={styles.settingsProgressBar}>
                   <div
-                    style={{
-                      height: '100%',
-                      width: `${(syncProgress.current / syncProgress.total) * 100}%`,
-                      backgroundColor: 'var(--color-accent)',
-                      borderRadius: 3,
-                      transition: 'width 0.3s ease',
-                    }}
+                    className={styles.settingsProgressFill}
+                    style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
                   />
                 </div>
               )}
 
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
+              <p className={styles.settingsProgressHint}>
                 {syncProgress.message}
               </p>
               {syncProgress.emailSubject && (
-                <p
-                  style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--color-ink-muted)',
-                    margin: 'var(--space-1) 0 0 0',
-                    fontStyle: 'italic',
-                  }}
-                >
+                <p className={styles.settingsProgressEmail}>
                   {syncProgress.emailSubject}
                 </p>
               )}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+          <div className={styles.settingsButtonRow}>
             <button
               className={`${styles.button} ${styles.buttonPrimary}`}
               onClick={handleSync}
@@ -265,40 +205,29 @@ export function EmailSettings({ onToast }: EmailSettingsProps) {
               onClick={handleDisconnect}
               disabled={disconnectEmail.isPending || isSyncing}
             >
-              {disconnectEmail.isPending ? 'Disconnecting...' : 'Disconnect Gmail'}
+              {disconnectEmail.isPending ? 'Disconnecting...' : 'Disconnect'}
             </button>
           </div>
         </>
       )}
 
-      {/* Has credentials (from env vars) but not connected */}
+      {/* Has credentials but not connected */}
       {!emailStatus?.connected && emailStatus?.hasCredentials && (
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-          <button
-            className={`${styles.button} ${styles.buttonPrimary}`}
-            onClick={handleConnect}
-            disabled={getAuthUrl.isPending}
-          >
-            {getAuthUrl.isPending ? 'Connecting...' : 'Connect Gmail'}
-          </button>
-        </div>
+        <button
+          className={`${styles.button} ${styles.buttonPrimary}`}
+          onClick={handleConnect}
+          disabled={getAuthUrl.isPending}
+        >
+          {getAuthUrl.isPending ? 'Connecting...' : 'Connect Gmail'}
+        </button>
       )}
 
       {/* No credentials configured */}
       {!emailStatus?.connected && !emailStatus?.hasCredentials && (
-        <div
-          style={{
-            backgroundColor: 'var(--color-bg-subtle)',
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--radius-lg)',
-            marginTop: 'var(--space-4)',
-          }}
-        >
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
-            Gmail integration requires the server administrator to configure OAuth credentials.
-            Contact your administrator to set up <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> environment variables.
-          </p>
-        </div>
+        <p className={styles.formHint}>
+          Gmail integration requires OAuth credentials. Set <code className={styles.settingsCode}>GMAIL_CLIENT_ID</code> and{' '}
+          <code className={styles.settingsCode}>GMAIL_CLIENT_SECRET</code> environment variables to enable.
+        </p>
       )}
     </section>
   );

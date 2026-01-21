@@ -22,7 +22,8 @@ import {
   useDeleteStory,
 } from '../hooks';
 import { Icons } from './Icons';
-import { Modal, ModalActions, modalStyles } from './Modal';
+import { Modal, ModalActions } from './Modal';
+import { modalStyles } from './modalStyles';
 import type { WorkExperience, Education, Skill, Project, Story } from '../types';
 import styles from '../App.module.css';
 import sectionStyles from './ProfileSections.module.css';

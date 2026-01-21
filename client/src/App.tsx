@@ -11,7 +11,7 @@ import {
 } from './components';
 import { Login } from './components/Login';
 import { Onboarding } from './components/Onboarding';
-import { useAuth } from './components/AuthProvider';
+import { useAuth } from './contexts/auth';
 import { profileApi } from './services/api';
 import styles from './App.module.css';
 

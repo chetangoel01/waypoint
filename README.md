@@ -123,7 +123,6 @@ waypoint/
 │   │   ├── db/             # Database schema & init
 │   │   └── types/          # TypeScript types
 │   └── package.json
-├── electron/               # Electron shell (WIP)
 └── package.json            # Root package.json
 ```
 
@@ -172,6 +171,28 @@ npm run build        # Build all packages
 npm run build:prod   # Build for production
 npm run start:prod   # Start production server
 ```
+
+## Testing
+
+```bash
+# Run all workspace tests
+npm run test
+
+# Server tests only
+npm run test --workspace=server
+
+# Client tests only
+npm run test --workspace=client
+```
+
+### Database Test Suite
+
+The server DB tests connect directly to Postgres to validate schema + RLS.
+Set `DATABASE_URL` in `.env` (see `.env.example`) before running.
+If `DATABASE_URL` is missing, the DB tests are skipped.
+
+Server tests also load `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` from `.env`
+so the Express app can initialize without exiting.
 
 ## Production Deployment
 

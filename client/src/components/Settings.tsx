@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useAiStatus, useSaveApiKey, useClearApiKey, useStatusOptions, useUpdateStatuses, useResetStatuses } from '../hooks';
-import { Icons } from './Icons';
 import { EmailSettings } from './EmailSettings';
+import { Icons } from './Icons';
 import { Toast } from './Toast';
 import styles from '../App.module.css';
 import type { StatusOption } from '../services/api';
 
-const colorOptions: StatusOption['color'][] = ['gray', 'blue', 'amber', 'green', 'red'];
+const colorOptions: { value: StatusOption['color']; label: string }[] = [
+  { value: 'gray', label: 'Gray' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'amber', label: 'Amber' },
+  { value: 'green', label: 'Green' },
+  { value: 'red', label: 'Red' },
+];
 
 const getStatusColorClass = (color: StatusOption['color']): string => {
   const colorClasses: Record<StatusOption['color'], string> = {
@@ -17,6 +23,17 @@ const getStatusColorClass = (color: StatusOption['color']): string => {
     red: styles.statusRed,
   };
   return colorClasses[color] || styles.statusGray;
+};
+
+const getColorDot = (color: StatusOption['color']): string => {
+  const colors: Record<StatusOption['color'], string> = {
+    gray: 'var(--color-ink-muted)',
+    blue: 'var(--color-sky)',
+    amber: 'var(--color-honey)',
+    green: 'var(--color-sage)',
+    red: 'var(--color-rose)',
+  };
+  return colors[color] || 'var(--color-ink-muted)';
 };
 
 export function Settings() {
@@ -32,6 +49,31 @@ export function Settings() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingStatuses, setEditingStatuses] = useState<StatusOption[] | null>(null);
   const [newStatus, setNewStatus] = useState({ key: '', label: '', color: 'gray' as StatusOption['color'] });
+
+  const aiStatusLabel = isLoading
+    ? 'Checking'
+    : aiStatus?.configured
+      ? 'Connected'
+      : 'Not configured';
+  const aiStatusHint = aiStatus?.configured
+    ? aiStatus.keyPreview
+      ? `Key ${aiStatus.keyPreview}`
+      : 'Key saved'
+    : 'Add an API key';
+  const aiSourceLabel = aiStatus?.source === 'env'
+    ? 'Environment'
+    : aiStatus?.source === 'database'
+      ? 'Database'
+      : 'Unset';
+  const aiIsDatabase = aiStatus?.source === 'database';
+  const aiStorageHint = aiStatus?.source === 'env'
+    ? 'Loaded from .env'
+    : aiIsDatabase
+      ? aiStatus?.encrypted
+        ? 'Encrypted at rest'
+        : 'Stored in database'
+      : 'No stored key';
+  const statusCountLabel = statusOptions ? `${statusOptions.length} statuses` : 'Loading...';
 
   const handleSaveApiKey = async () => {
     if (!apiKeyInput.trim()) return;
@@ -121,51 +163,65 @@ export function Settings() {
         />
       )}
 
-      <div className={styles.page}>
-        <header className={styles.pageHeader}>
+      <div className={`${styles.page} ${styles.settingsPage}`}>
+        <header className={`${styles.pageHeader} ${styles.settingsHeader}`}>
           <div className={styles.pageHeaderInfo}>
             <h1 className={styles.pageTitle}>Settings</h1>
-            <p className={styles.pageSubtitle}>Configure your preferences</p>
+            <p className={styles.pageSubtitle}>
+              Shape how Waypoint runs, connects, and categorizes your work.
+            </p>
+          </div>
+          <div className={styles.settingsMetaGrid}>
+            <div className={styles.settingsMetaCard}>
+              <span className={styles.settingsMetaLabel}>AI</span>
+              <span className={styles.settingsMetaValue}>{aiStatusLabel}</span>
+              <span className={styles.settingsMetaHint}>{aiStatusHint}</span>
+            </div>
+            <div className={styles.settingsMetaCard}>
+              <span className={styles.settingsMetaLabel}>Statuses</span>
+              <span className={styles.settingsMetaValue}>{statusCountLabel}</span>
+              <span className={styles.settingsMetaHint}>Editable labels</span>
+            </div>
+            <div className={styles.settingsMetaCard}>
+              <span className={styles.settingsMetaLabel}>AI Source</span>
+              <span className={styles.settingsMetaValue}>{aiSourceLabel}</span>
+              <span className={styles.settingsMetaHint}>{aiStorageHint}</span>
+            </div>
           </div>
         </header>
 
+        {/* AI Configuration */}
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>AI Configuration</h2>
-          
-          {/* Status indicator - using existing badge styles */}
+          <p className={`${styles.formHint} ${styles.settingsSectionIntro}`}>
+            Control access to GPT-assisted drafting and key storage.
+          </p>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Status</label>
             <div>
               {isLoading ? (
-                <span className={`${styles.statusBadge} ${styles.statusSaved}`}>
-                  Checking...
-                </span>
+                <span className={`${styles.statusBadge} ${styles.statusSaved}`}>Checking...</span>
               ) : aiStatus?.configured ? (
                 <span className={`${styles.statusBadge} ${styles.statusOffer}`}>
                   Connected {aiStatus.keyPreview && `(${aiStatus.keyPreview})`}
-                  {aiStatus.source === 'env' && ' • from .env'}
-                  {aiStatus.source === 'database' && aiStatus.encrypted && ' • encrypted'}
+                  {aiStatus.source === 'env' && ' · from .env'}
+                  {aiStatus.source === 'database' && aiStatus.encrypted && ' · encrypted'}
                 </span>
               ) : (
-                <span className={`${styles.statusBadge} ${styles.statusInterview}`}>
-                  Not configured
-                </span>
+                <span className={`${styles.statusBadge} ${styles.statusInterview}`}>Not configured</span>
               )}
             </div>
           </div>
 
-          {/* Show different UI based on whether key is from env */}
           {aiStatus?.source === 'env' ? (
             <div className={styles.formGroup}>
               <p className={styles.formHint}>
                 API key loaded from <code className={styles.settingsCode}>OPENAI_API_KEY</code> environment variable.
-                <br />
-                To change it, update your <code className={styles.settingsCode}>.env</code> file and restart the server.
+                Update your <code className={styles.settingsCode}>.env</code> file to change it.
               </p>
             </div>
           ) : (
             <>
-              {/* API Key input */}
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>OpenAI API Key</label>
                 <p className={styles.formHint}>
@@ -176,26 +232,18 @@ export function Settings() {
                     rel="noopener noreferrer"
                     className={styles.sectionLink}
                   >
-                    Get your API key <Icons.ExternalLink />
+                    Get your API key
                   </a>
-                </p>
-                <p className={`${styles.formHint} ${styles.settingsHintSpaced}`}>
-                  Your key is stored securely in the database and persists across sessions.
-                  {aiStatus?.configured && !aiStatus.encrypted && aiStatus.source === 'database' && (
-                    <span className={styles.settingsWarning}>
-                      Note: Set ENCRYPTION_KEY in your server environment for encrypted storage.
-                    </span>
-                  )}
                 </p>
                 <div className={styles.settingsApiKeyRow}>
                   <input
                     type="password"
-                    placeholder={aiStatus?.configured ? "Enter new key to replace" : "Paste your API key"}
+                    placeholder={aiStatus?.configured ? 'Enter new key to replace' : 'sk-...'}
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
                   />
-                  <button 
+                  <button
                     className={`${styles.button} ${styles.buttonPrimary}`}
                     onClick={handleSaveApiKey}
                     disabled={!apiKeyInput.trim() || saveApiKey.isPending}
@@ -205,10 +253,9 @@ export function Settings() {
                 </div>
               </div>
 
-              {/* Clear API Key */}
               {aiStatus?.configured && (
                 <div className={styles.formGroup}>
-                  <button 
+                  <button
                     className={`${styles.buttonLink} ${styles.buttonLinkDanger}`}
                     onClick={handleClearApiKey}
                     disabled={clearApiKey.isPending}
@@ -221,17 +268,21 @@ export function Settings() {
           )}
         </section>
 
+        {/* Application Statuses */}
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>Application Statuses</h2>
-          <p className={`${styles.formHint} ${styles.settingsHintBottom}`}>
-            Customize the status options for tracking applications
+          <p className={`${styles.formHint} ${styles.settingsSectionIntro}`}>
+            Customize the status options for tracking applications.
           </p>
-          
           {editingStatuses ? (
             <>
               <div className={styles.settingsStatusList}>
                 {editingStatuses.map((status) => (
                   <div key={status.key} className={styles.settingsStatusRow}>
+                    <span
+                      className={styles.settingsColorDot}
+                      style={{ backgroundColor: getColorDot(status.color) }}
+                    />
                     <input
                       type="text"
                       value={status.label}
@@ -243,31 +294,27 @@ export function Settings() {
                       onChange={(e) => handleUpdateStatus(status.key, 'color', e.target.value)}
                       className={styles.settingsStatusSelect}
                     >
-                      {colorOptions.map(c => (
-                        <option key={c} value={c}>{c}</option>
+                      {colorOptions.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
                     </select>
-                    <span className={styles.settingsStatusKey}>
-                      {status.key}
-                    </span>
+                    <span className={styles.settingsStatusKey}>{status.key}</span>
                     <button
                       onClick={() => handleRemoveStatus(status.key)}
                       className={styles.settingsDeleteBtn}
-                      title="Remove"
+                      title="Remove status"
                     >
-                      <span className={styles.settingsDeleteIcon}>
-                        <Icons.Plus />
-                      </span>
+                      <Icons.X />
                     </button>
                   </div>
                 ))}
               </div>
-              
-              {/* Add new status */}
+
               <div className={styles.settingsAddRow}>
+                <span className={styles.settingsColorDot} style={{ backgroundColor: getColorDot(newStatus.color) }} />
                 <input
                   type="text"
-                  placeholder="Label"
+                  placeholder="New status label"
                   value={newStatus.label}
                   onChange={(e) => setNewStatus({ ...newStatus, label: e.target.value, key: e.target.value })}
                   className={styles.settingsStatusInput}
@@ -277,8 +324,8 @@ export function Settings() {
                   onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value as StatusOption['color'] })}
                   className={styles.settingsStatusSelect}
                 >
-                  {colorOptions.map(c => (
-                    <option key={c} value={c}>{c}</option>
+                  {colorOptions.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
                 <button
@@ -289,7 +336,7 @@ export function Settings() {
                   Add
                 </button>
               </div>
-              
+
               <div className={styles.settingsActions}>
                 <button
                   className={`${styles.button} ${styles.buttonPrimary}`}
@@ -335,28 +382,18 @@ export function Settings() {
           )}
         </section>
 
+        {/* Email Integration */}
         <EmailSettings onToast={setToast} />
 
-        <section className={styles.profileSection}>
-          <h2 className={styles.profileSectionTitle}>Data Management</h2>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Export Your Data</label>
-            <p className={styles.formHint}>Download all your data as a JSON file</p>
-            <button className={`${styles.button} ${styles.buttonSecondary} ${styles.settingsExportBtn}`}>
-              Export to JSON
-            </button>
-          </div>
-        </section>
-
+        {/* About */}
         <section className={styles.profileSection}>
           <h2 className={styles.profileSectionTitle}>About</h2>
-          <div className={styles.formGroup}>
-            <p className={styles.formHint}>
-              Waypoint Job Tracker v1.0.0
-              <br />
-              A personal job application tracker with AI-powered content generation.
-            </p>
-          </div>
+          <p className={`${styles.formHint} ${styles.settingsSectionIntro}`}>
+            App details and release context.
+          </p>
+          <p className={styles.formHint}>
+            Waypoint v1.0.0 · A personal job application tracker with AI-powered content generation.
+          </p>
         </section>
       </div>
     </div>
