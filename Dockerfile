@@ -24,6 +24,10 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
 # Copy package files for production install
 COPY package*.json ./
 COPY server/package*.json ./server/
@@ -35,6 +39,12 @@ RUN npm ci --workspace=server --omit=dev
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist
 COPY server/src/db/*.sql ./server/src/db/
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 # Set environment
 ENV NODE_ENV=production

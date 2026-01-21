@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/index.js';
 import { errorHandler, error } from './middleware/response.js';
+import { requestLogger } from './middleware/request-logger.js';
 import config from './config/index.js';
 
 const app = express();
@@ -11,12 +12,19 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration - restrict to specific origins
+const allowedOrigins = [config.clientUrl];
+if (config.isDevelopment) {
+  allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
+}
 const corsOptions = {
-  origin: config.isProduction ? config.clientUrl : true,
+  origin: allowedOrigins,
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Request logging (after CORS, before routes)
+app.use(requestLogger);
 
 // Request size limits
 app.use(express.json({ limit: config.maxRequestSize }));

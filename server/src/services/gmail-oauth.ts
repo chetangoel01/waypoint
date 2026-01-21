@@ -7,7 +7,7 @@ import { encrypt, decrypt } from '../utils/crypto.js';
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
-// In-memory store for OAuth state tokens (could use Redis in production)
+// In-memory store for OAuth state tokens
 const oauthStateStore = new Map<string, { userId: string; expiresAt: number }>();
 
 // Clean up expired states periodically
@@ -27,11 +27,11 @@ const PROVIDER = 'google_gmail';
 function getGmailCredentials(): { clientId: string; clientSecret: string } {
   const clientId = process.env.GMAIL_CLIENT_ID;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-  
+
   if (!clientId || !clientSecret) {
     throw new Error('Gmail OAuth credentials not configured. Set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET environment variables.');
   }
-  
+
   return { clientId, clientSecret };
 }
 

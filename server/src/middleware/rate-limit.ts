@@ -7,7 +7,7 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-// In-memory store for rate limiting (could use Redis in production)
+// In-memory store for rate limiting
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Clean up expired entries periodically

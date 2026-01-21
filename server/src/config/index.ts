@@ -54,7 +54,7 @@ export function validateEnv(): void {
   // Production requirements
   if (config.isProduction) {
     if (!process.env.ENCRYPTION_KEY) {
-      errors.push('ENCRYPTION_KEY is required in production - generates with: openssl rand -base64 32');
+      errors.push('ENCRYPTION_KEY is required in production - generate with: openssl rand -base64 32');
     }
     if (!process.env.CLIENT_URL) {
       warnings.push('CLIENT_URL not set in production - using default');
