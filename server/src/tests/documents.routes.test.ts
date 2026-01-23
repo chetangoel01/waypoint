@@ -171,19 +171,17 @@ describe('documents routes', () => {
       .send({
         application_id: 1,
         type: 'invalid_type',
-        content: 'Test',
       });
 
     expect(response.status).toBe(400);
   });
 
-  it('validates content length', async () => {
+  it('validates version content length', async () => {
     const response = await request(app)
-      .post('/api/documents')
+      .post('/api/documents/1/versions')
       .send({
-        application_id: 1,
-        type: 'cover_letter',
         content: 'A'.repeat(100001), // Too long
+        is_ai_generated: false,
       });
 
     expect(response.status).toBe(400);
