@@ -34,6 +34,9 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Install wget for health checks
+RUN apk add --no-cache wget
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup

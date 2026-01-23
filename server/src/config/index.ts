@@ -40,6 +40,11 @@ export const config = {
 
 // Validate required environment variables
 export function validateEnv(): void {
+  // Skip validation in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return;
+  }
+
   const errors: string[] = [];
   const warnings: string[] = [];
 
