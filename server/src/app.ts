@@ -4,16 +4,18 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes/index.js';
 import { errorHandler, error } from './middleware/response.js';
 import { requestLogger } from './middleware/request-logger.js';
 import config from './config/index.js';
+import { openApiSpec } from './docs/openapi.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// Security headers with CSP configured for Supabase and PDF.js
+// Security headers with CSP configured for Supabase, PDF.js, and Swagger UI
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -21,7 +23,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://unpkg.com', 'blob:'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
         connectSrc: [
           "'self'",
@@ -83,6 +85,17 @@ app.get('/api/health', (_req: Request, res: Response) => {
     },
     error: null,
   });
+});
+
+// API Documentation (Swagger UI)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Waypoint API Documentation',
+}));
+
+// Serve OpenAPI spec as JSON
+app.get('/api/docs.json', (_req: Request, res: Response) => {
+  res.json(openApiSpec);
 });
 
 // API routes
