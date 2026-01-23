@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { success, error, ApiError, notFound, validationError, errorHandler, asyncHandler } from '../../middleware/response.js';
 import { logger } from '../../utils/logger.js';
 
@@ -153,12 +153,12 @@ describe('errorHandler middleware', () => {
 describe('asyncHandler', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
-  let next: ReturnType<typeof vi.fn>;
+  let next: NextFunction;
 
   beforeEach(() => {
     req = {};
     res = {};
-    next = vi.fn();
+    next = vi.fn() as unknown as NextFunction;
   });
 
   it('passes through successful handler', async () => {
@@ -175,7 +175,7 @@ describe('asyncHandler', () => {
 
   it('catches and forwards errors', async () => {
     const error = new Error('Handler error');
-    const handler = vi.fn(() => {
+    const handler = vi.fn(async () => {
       throw error;
     });
     const wrapped = asyncHandler(handler);

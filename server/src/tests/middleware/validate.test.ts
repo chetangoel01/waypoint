@@ -44,7 +44,7 @@ describe('validate middleware', () => {
 
       expect(next).toHaveBeenCalledWith(expect.any(ApiError));
       const error = (next as any).mock.calls[0][0] as ApiError;
-      expect(error.statusCode).toBe(400);
+      expect(error.status).toBe(400);
       expect(error.message).toContain('name');
     });
 
@@ -56,7 +56,7 @@ describe('validate middleware', () => {
 
       expect(next).toHaveBeenCalledWith(expect.any(ApiError));
       const error = (next as any).mock.calls[0][0] as ApiError;
-      expect(error.statusCode).toBe(400);
+      expect(error.status).toBe(400);
     });
   });
 
@@ -83,7 +83,7 @@ describe('validate middleware', () => {
 
       expect(next).toHaveBeenCalledWith(expect.any(ApiError));
       const error = (next as any).mock.calls[0][0] as ApiError;
-      expect(error.statusCode).toBe(400);
+      expect(error.status).toBe(400);
     });
   });
 
@@ -109,7 +109,7 @@ describe('validate middleware', () => {
 
       expect(next).toHaveBeenCalledWith(expect.any(ApiError));
       const error = (next as any).mock.calls[0][0] as ApiError;
-      expect(error.statusCode).toBe(400);
+      expect(error.status).toBe(400);
     });
   });
 });
