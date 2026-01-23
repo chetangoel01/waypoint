@@ -1,16 +1,39 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import routes from './routes/index.js';
 import { errorHandler, error } from './middleware/response.js';
 import { requestLogger } from './middleware/request-logger.js';
 import config from './config/index.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 
-// Security headers
-app.use(helmet());
+// Security headers with CSP configured for Supabase and PDF.js
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://unpkg.com', 'blob:'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: [
+          "'self'",
+          'https://mxciucdeesxtxdvarkmc.supabase.co',
+          'https://*.supabase.co',
+          'https://unpkg.com',
+        ],
+        workerSrc: ["'self'", 'blob:', 'https://unpkg.com'],
+      },
+    },
+  })
+);
 
 // CORS configuration - restrict to specific origins
 const allowedOrigins = [config.clientUrl];
@@ -65,11 +88,27 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // API routes
 app.use('/api', routes);
 
-// Error handling middleware
+// Serve static files from client/dist in production
+if (config.isProduction) {
+  const clientDistPath = resolve(__dirname, '../../client/dist');
+  app.use(express.static(clientDistPath));
+
+  // Serve index.html for all non-API GET routes (SPA routing)
+  // This must come after API routes but before error handler
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    // Skip API routes
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(resolve(clientDistPath, 'index.html'));
+  });
+}
+
+// Error handling middleware (must be after all routes)
 app.use(errorHandler);
 
-// 404 handler
-app.use((_req: Request, res: Response) => {
+// 404 handler for API routes (only reached if no route matched)
+app.use('/api/*', (_req: Request, res: Response) => {
   res.status(404).json(error('Not found'));
 });
 

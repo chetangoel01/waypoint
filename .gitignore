@@ -26,6 +26,7 @@ build/
 *.swo
 *~
 .claude/
+.mcp.json
 
 # OS files
 .DS_Store
