@@ -133,4 +133,85 @@ describe('applications routes', () => {
     expect(response.body.data.status).toBe('applied');
     expect(applicationsService.updateStatus).toHaveBeenCalledWith(authState.supabase, 1, 'applied');
   });
+
+  it('returns 404 when application not found', async () => {
+    applicationsService.getById.mockResolvedValue(null);
+
+    const response = await request(app).get('/api/applications/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toContain('not found');
+  });
+
+  it('handles service errors gracefully', async () => {
+    applicationsService.getAll.mockRejectedValue(new Error('Database error'));
+
+    const response = await request(app).get('/api/applications');
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('filters applications by status', async () => {
+    applicationsService.getAll.mockResolvedValue([baseApplication]);
+
+    const response = await request(app).get('/api/applications?status=applied');
+
+    expect(response.status).toBe(200);
+    expect(applicationsService.getAll).toHaveBeenCalledWith(authState.supabase, {
+      status: 'applied',
+      company: undefined,
+    });
+  });
+
+  it('filters applications by company', async () => {
+    applicationsService.getAll.mockResolvedValue([baseApplication]);
+
+    const response = await request(app).get('/api/applications?company=Acme');
+
+    expect(response.status).toBe(200);
+    expect(applicationsService.getAll).toHaveBeenCalledWith(authState.supabase, {
+      status: undefined,
+      company: 'Acme',
+    });
+  });
+
+  it('handles invalid ID format', async () => {
+    const response = await request(app).get('/api/applications/invalid');
+
+    // ID parsing will result in NaN, service should handle it
+    expect(applicationsService.getById).toHaveBeenCalled();
+  });
+
+  it('handles create service errors', async () => {
+    applicationsService.create.mockRejectedValue(new Error('Validation failed'));
+
+    const response = await request(app)
+      .post('/api/applications')
+      .send({ company: 'Acme' });
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('handles update service errors', async () => {
+    applicationsService.update.mockRejectedValue(new Error('Update failed'));
+
+    const response = await request(app)
+      .put('/api/applications/1')
+      .send({ company: 'Updated' });
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('handles delete service errors', async () => {
+    applicationsService.remove.mockRejectedValue(new Error('Delete failed'));
+
+    const response = await request(app).delete('/api/applications/1');
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
 });

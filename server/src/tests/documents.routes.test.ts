@@ -147,4 +147,54 @@ describe('documents routes', () => {
       is_ai_generated: false,
     });
   });
+
+  it('returns 404 when document not found', async () => {
+    documentsService.getWithVersions.mockResolvedValue(null);
+
+    const response = await request(app).get('/api/documents/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('validates document creation payload', async () => {
+    const response = await request(app)
+      .post('/api/documents')
+      .send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it('validates document type enum', async () => {
+    const response = await request(app)
+      .post('/api/documents')
+      .send({
+        application_id: 1,
+        type: 'invalid_type',
+        content: 'Test',
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('validates content length', async () => {
+    const response = await request(app)
+      .post('/api/documents')
+      .send({
+        application_id: 1,
+        type: 'cover_letter',
+        content: 'A'.repeat(100001), // Too long
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('handles service errors', async () => {
+    documentsService.getAll.mockRejectedValue(new Error('Database error'));
+
+    const response = await request(app).get('/api/documents');
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
 });

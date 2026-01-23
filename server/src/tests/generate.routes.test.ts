@@ -117,4 +117,56 @@ describe('generate routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.data.experience).toEqual([]);
   });
+
+  it('handles AI service errors', async () => {
+    aiService.generateCoverLetter.mockRejectedValue(new Error('AI service unavailable'));
+
+    const response = await request(app)
+      .post('/api/generate/cover-letter')
+      .send({ applicationId: 1 });
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('validates custom response requires question', async () => {
+    const response = await request(app)
+      .post('/api/generate/custom-response')
+      .send({ applicationId: 1 });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('validates refine requires content and instruction', async () => {
+    const response = await request(app)
+      .post('/api/generate/refine')
+      .send({ content: 'Draft' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('validates parse-resume requires resumeText', async () => {
+    const response = await request(app)
+      .post('/api/generate/parse-resume')
+      .send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it('validates parse-resume resumeText length', async () => {
+    const response = await request(app)
+      .post('/api/generate/parse-resume')
+      .send({ resumeText: 'Too short' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('handles AI not configured', async () => {
+    aiService.isAiConfigured.mockResolvedValue(false);
+
+    const response = await request(app).get('/api/generate/status');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.configured).toBe(false);
+  });
 });
