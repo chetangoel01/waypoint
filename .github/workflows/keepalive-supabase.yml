@@ -1,0 +1,29 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Daily at 09:00 UTC. Cron syntax: minute hour day-of-month month day-of-week
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase to register DB activity
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -o /tmp/body -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/profile?select=id&limit=1")
+          echo "HTTP ${response}"
+          if [ "${response}" -lt 200 ] || [ "${response}" -ge 300 ]; then
+            echo "Supabase ping failed:"
+            cat /tmp/body
+            exit 1
+          fi
+          echo "Supabase ping OK"
