@@ -7,35 +7,26 @@ WORKDIR /app
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 
-# Convert build args to environment variables for Vite
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY client/package*.json ./client/
 COPY server/package*.json ./server/
 
-# Install dependencies with reduced parallelism for low-memory systems
-RUN npm ci --maxsockets=2
+# Install dependencies
+RUN npm ci
 
 # Copy source files
 COPY client/ ./client/
 COPY server/ ./server/
 
-# Build client and server separately to reduce peak memory usage
-ENV NODE_OPTIONS="--max-old-space-size=512"
-RUN npm run build:server
-RUN npm run build:client
+# Build client and server
+RUN npm run build:client && npm run build:server
 
 # Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
-
-# Install wget for health checks
-RUN apk add --no-cache wget
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \

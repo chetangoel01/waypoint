@@ -25,14 +25,7 @@ export const requireAuth = async (
     });
   }
 
-  if (!authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid authorization format',
-    });
-  }
-
-  const token = authHeader.slice(7); // Remove 'Bearer '
+  const token = authHeader.replace('Bearer ', '');
 
   // Create a new client for this user using their access token
   // This ensures RLS policies are applied automatically

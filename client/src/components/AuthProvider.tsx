@@ -9,36 +9,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if we have an OAuth callback code in the URL
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-
-    console.log('Auth init - URL code:', code, 'hash token:', accessToken ? 'present' : 'none');
-    console.log('Current URL:', window.location.href);
-
-    // Set up auth state listener FIRST
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session?.user?.email);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      // Clean up URL after successful auth
-      if (event === 'SIGNED_IN' && (code || accessToken)) {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
     });
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Session check error:', error);
-      }
-      console.log('Initial session check:', session?.user?.email || 'no session');
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

@@ -6,7 +6,6 @@ import * as gmailOAuth from '../services/gmail-oauth.js';
 import * as emailSync from '../services/email-sync.js';
 import config from '../config/index.js';
 import supabase from '../db/index.js';
-import { logger } from '../utils/logger.js';
 import type { EmailStatus, SyncProgress } from '../types/index.js';
 
 const router = Router();
@@ -44,31 +43,7 @@ router.get(
 
     const userId = req.user!.id;
     const url = gmailOAuth.getAuthUrl(userId);
-    
-    // Debug logging
-    logger.info({
-      clientUrl: config.clientUrl,
-      serverUrl: config.serverUrl,
-      envClientUrl: process.env.CLIENT_URL,
-      envServerUrl: process.env.SERVER_URL,
-      generatedUrl: url,
-    }, 'OAuth auth-url request');
-    
     res.json(success({ url }));
-  })
-);
-
-// GET /api/email/debug-config - Debug endpoint to check config (remove in production)
-router.get(
-  '/debug-config',
-  asyncHandler(async (_req: Request, res: Response) => {
-    res.json({
-      clientUrl: config.clientUrl,
-      serverUrl: config.serverUrl,
-      envClientUrl: process.env.CLIENT_URL,
-      envServerUrl: process.env.SERVER_URL,
-      nodeEnv: config.nodeEnv,
-    });
   })
 );
 
@@ -78,14 +53,6 @@ emailCallbackRouter.get(
   '/callback',
   asyncHandler(async (req: Request, res: Response) => {
     const { code, error, state } = req.query;
-    
-    // Debug logging
-    logger.info({
-      clientUrl: config.clientUrl,
-      serverUrl: config.serverUrl,
-      envClientUrl: process.env.CLIENT_URL,
-      envServerUrl: process.env.SERVER_URL,
-    }, 'OAuth callback - environment check');
 
     if (error) {
       // Redirect to settings page with error
@@ -120,9 +87,7 @@ emailCallbackRouter.get(
       // verified the user ID via the validated OAuth state token)
       await gmailOAuth.exchangeCode(supabase, userId, code);
       // Redirect to settings page with success
-      const redirectUrl = `${config.clientUrl}/settings?email_connected=true`;
-      logger.info({ redirectUrl }, 'OAuth success - redirecting');
-      res.redirect(redirectUrl);
+      res.redirect(`${config.clientUrl}/settings?email_connected=true`);
     } catch {
       // Don't expose internal error details
       res.redirect(

@@ -174,21 +174,13 @@ export const parseResumeSchema = z.object({
 // ============================================
 
 export const createDocumentSchema = z.object({
-  application_id: z.number().int().positive().nullable().optional(),
-  type: z.enum(['cover_letter', 'custom_question']),
-  question: z.string().max(1000).nullable().optional(),
-  key_points: z.array(z.string().max(500)).nullable().optional(),
+  application_id: z.number().int().positive(),
+  type: z.enum(['cover_letter', 'resume_points', 'interview_prep']),
+  content: z.string().min(1).max(100000),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateDocumentSchema = z.object({
-  application_id: z.number().int().positive().nullable().optional(),
-  type: z.enum(['cover_letter', 'custom_question']).optional(),
-  question: z.string().max(1000).nullable().optional(),
-  key_points: z.array(z.string().max(500)).nullable().optional(),
-});
-
-export const createDocumentVersionSchema = z.object({
-  content: z.string().min(1).max(100000),
-  prompt_used: z.string().max(10000).nullable().optional(),
-  is_ai_generated: z.boolean().optional(),
+  content: z.string().min(1).max(100000).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
