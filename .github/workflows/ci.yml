@@ -37,17 +37,23 @@ jobs:
 
       - name: Run tests
         env:
+          NODE_ENV: test
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: npm test
 
       - name: Build client
         env:
-          VITE_SUPABASE_URL: https://example.supabase.co
-          VITE_SUPABASE_ANON_KEY: dummy-anon-key-for-ci-build
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build:client
 
       - name: Build server
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: npm run build:server
 
   docker-smoke-test:
@@ -61,16 +67,16 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t waypoint:test \
-            --build-arg VITE_SUPABASE_URL=https://example.supabase.co \
-            --build-arg VITE_SUPABASE_ANON_KEY=dummy-anon-key-for-ci-build \
+            --build-arg VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
             .
 
       - name: Test Docker container starts
         run: |
           docker run -d --name test-container \
-            -e SUPABASE_URL="https://example.supabase.co" \
-            -e SUPABASE_SERVICE_KEY="dummy-service-key" \
-            -e ENCRYPTION_KEY="dummy-encryption-key-for-testing-purposes" \
+            -e SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            -e SUPABASE_SERVICE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -e ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}" \
             -p 3001:3001 waypoint:test
           sleep 10
           curl -f http://localhost:3001/api/health || (docker logs test-container && exit 1)

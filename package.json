@@ -28,8 +28,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "googleapis": "^170.0.0"
   }
 }

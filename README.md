@@ -87,6 +87,12 @@ CLIENT_URL=http://localhost:5173
 # Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Security - Encryption key for sensitive data (at least 32 characters)
+# Generate with: openssl rand -base64 32
+ENCRYPTION_KEY=your-encryption-key-here
 
 # OpenAI API Key (can also be set in Settings)
 OPENAI_API_KEY=sk-your-key-here
@@ -94,6 +100,8 @@ OPENAI_API_KEY=sk-your-key-here
 # Logging level (debug | info | warn | error)
 LOG_LEVEL=info
 ```
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+read_lints
 
 ### Gmail Integration Setup
 
@@ -114,15 +122,20 @@ waypoint/
 │   │   ├── components/     # UI components
 │   │   ├── hooks/          # React Query hooks
 │   │   ├── services/       # API client
+│   │   ├── tests/          # Test setup
 │   │   └── types/          # TypeScript types
 │   └── package.json
 ├── server/                 # Express backend
 │   ├── src/
 │   │   ├── routes/         # API routes
 │   │   ├── services/       # Business logic
+│   │   ├── middleware/     # Auth, rate-limit, validation
 │   │   ├── db/             # Database schema & init
+│   │   ├── tests/          # Test suite
 │   │   └── types/          # TypeScript types
 │   └── package.json
+├── .github/
+│   └── workflows/          # CI/CD pipelines
 └── package.json            # Root package.json
 ```
 
@@ -183,6 +196,30 @@ npm run test --workspace=server
 
 # Client tests only
 npm run test --workspace=client
+
+# Run tests in watch mode
+npm run test --workspace=server -- --watch
+```
+
+### Test Coverage
+
+The test suite includes comprehensive coverage for:
+
+- **Middleware Tests**: Authentication, rate limiting, validation, error handling
+- **Route Tests**: All API endpoints with success and error scenarios
+- **Schema Validation**: Zod schema validation for all request/response types
+- **Service Layer**: Business logic and data access layer tests
+- **Edge Cases**: Error handling, validation failures, not found scenarios
+
+### Test Structure
+
+```
+server/src/tests/
+├── middleware/          # Auth, rate-limit, validate, response tests
+├── routes/              # API endpoint tests (applications, documents, etc.)
+├── schemas.test.ts      # Schema validation tests
+├── db-schema.test.ts    # Database schema and RLS tests
+└── setup.ts             # Test environment configuration
 ```
 
 ### Database Test Suite
@@ -193,6 +230,24 @@ If `DATABASE_URL` is missing, the DB tests are skipped.
 
 Server tests also load `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` from `.env`
 so the Express app can initialize without exiting.
+
+### CI/CD
+
+The project uses GitHub Actions for continuous integration:
+
+- **Automated Testing**: Runs on every push and pull request
+- **Multi-Node Testing**: Tests against Node.js 20 and 22
+- **Build Verification**: Ensures both client and server build successfully
+- **Docker Smoke Tests**: Validates Docker container builds and health checks
+
+**Required GitHub Secrets** (for CI):
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_SERVICE_KEY` - Your Supabase service role key
+- `ENCRYPTION_KEY` - Encryption key (at least 32 characters)
+- `VITE_SUPABASE_URL` - Supabase URL for client build
+- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key for client build
+
+View CI status at: https://github.com/chetangoel01/waypoint/actions
 
 ## Production Deployment
 

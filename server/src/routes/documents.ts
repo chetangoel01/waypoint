@@ -1,7 +1,9 @@
 import { Router, Response } from 'express';
 import { asyncHandler, success, notFound } from '../middleware/response.js';
+import { validateBody } from '../middleware/validate.js';
 import { AuthRequest } from '../middleware/auth.js';
 import * as documentsService from '../services/documents.js';
+import { createDocumentSchema, updateDocumentSchema, createDocumentVersionSchema } from '../schemas/index.js';
 
 const router = Router();
 
@@ -33,6 +35,7 @@ router.get(
 // POST /api/documents - Create document
 router.post(
   '/',
+  validateBody(createDocumentSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const document = await documentsService.create(req.supabase!, req.body);
     res.status(201).json(success(document));
@@ -42,6 +45,7 @@ router.post(
 // PUT /api/documents/:id - Update document
 router.put(
   '/:id',
+  validateBody(updateDocumentSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
     const document = await documentsService.update(req.supabase!, id, req.body);
@@ -76,6 +80,7 @@ router.get(
 // POST /api/documents/:id/versions - Add new version
 router.post(
   '/:id/versions',
+  validateBody(createDocumentVersionSchema),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = parseInt(req.params.id, 10);
     const version = await documentsService.addVersion(req.supabase!, id, req.body);

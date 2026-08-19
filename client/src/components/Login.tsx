@@ -11,10 +11,16 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
+      // Always use production URL if we're on the production domain, otherwise use current origin
+      const isProductionDomain = window.location.hostname === 'waypoint-o8bu.onrender.com';
+      const redirectTo = isProductionDomain
+        ? 'https://waypoint-o8bu.onrender.com'
+        : window.location.origin;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo,
           scopes: 'email profile',
         },
       });
