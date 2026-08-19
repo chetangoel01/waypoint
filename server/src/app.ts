@@ -2,15 +2,33 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import routes from './routes/index.js';
 import { errorHandler, error } from './middleware/response.js';
 import { requestLogger } from './middleware/request-logger.js';
 import config from './config/index.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 
-// Security headers
-app.use(helmet());
+// Security headers - configured for SPA
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "https://*.supabase.co", "wss://*.supabase.co"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 // CORS configuration - restrict to specific origins
 const allowedOrigins = [config.clientUrl];
@@ -68,9 +86,16 @@ app.use('/api', routes);
 // Error handling middleware
 app.use(errorHandler);
 
-// 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json(error('Not found'));
+// Serve static files from client dist (production)
+const clientDistPath = join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+
+// SPA fallback - serve index.html for all non-API routes
+app.get('*', (req: Request, res: Response) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json(error('Not found'));
+  }
+  res.sendFile(join(clientDistPath, 'index.html'));
 });
 
 export default app;

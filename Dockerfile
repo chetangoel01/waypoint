@@ -32,8 +32,9 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Copy package files for production install
+# Copy package files for production install (need all workspace files for npm)
 COPY package*.json ./
+COPY client/package*.json ./client/
 COPY server/package*.json ./server/
 
 # Install production dependencies only
